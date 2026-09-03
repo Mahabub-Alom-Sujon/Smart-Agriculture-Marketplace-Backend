@@ -12,12 +12,239 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  FARMER
+  BUYER
+  EXPERT
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum CropStatus {
+  PLANNED
+  GROWING
+  HARVESTED
+}
+
+enum ProductStatus {
+  ACTIVE
+  SOLD_OUT
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  DELIVERED
+  CANCELLED
+}
+
+enum ConsultationStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+}
+
+// ====================
+// USER
+// ====================
+
 model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String?
+  phone         String?
+  address       String?
+  image         String?
+  googleId      String?        @unique
+  role          UserRole       @default(BUYER)
+  status        UserStatus     @default(ACTIVE)
+  farms         Farm[]
+  products      Product[]
+  consultation  Consultation[]
+  expertAdvices ExpertAdvice[]
+  buyer         Buyer?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// ====================
+// FARM
+// ====================
+
+model Farm {
   id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String?
-  googleId  String?  @unique
+  farmName  String
+  location  String
+  landSize  Float?
+  soilType  String?
+  farmerId  String   @unique
+  farmer    User     @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  crops     Crop[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Buyer {
+  id        String   @id @default(uuid())
+  address   String?
+  city      String?
+  country   String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orders    Order[]
+  reviews   Review[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ====================
+// CROP
+// ====================
+
+model Crop {
+  id           String     @id @default(uuid())
+  name         String
+  variety      String?
+  plantingDate DateTime?
+  harvestDate  DateTime?
+  status       CropStatus @default(PLANNED)
+  farmId       String
+  farm         Farm       @relation(fields: [farmId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// ====================
+// CATEGORY
+// ====================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  image       String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ====================
+// PRODUCT
+// ====================
+
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  price       Int
+  quantity    Float
+  unit        String        @default("KG")
+  image       String?
+  status      ProductStatus @default(ACTIVE)
+  farmerId    String
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farmer      User          @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderItems  OrderItem[]
+  reviews     Review[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// ====================
+// CONSULTATION
+// ====================
+
+model Consultation {
+  id        String             @id @default(uuid())
+  cropName  String?
+  problem   String
+  image     String?
+  status    ConsultationStatus @default(PENDING)
+  advice    ExpertAdvice?
+  farmerId  String
+  farmer    User               @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+// ====================
+// EXPERT ADVICE
+// ====================
+
+model ExpertAdvice {
+  id             String       @id @default(uuid())
+  diagnosis      String
+  recommendation String
+  fertilizer     String?
+  pesticide      String?
+  consultationId String       @unique
+  expertId       String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  expert         User         @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// ====================
+// ORDER
+// ====================
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  totalAmount     Int
+  deliveryAddress String
+  status          OrderStatus @default(PENDING)
+  buyerId         String
+  farmerId        String
+  buyer           Buyer       @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderItems      OrderItem[]
+  reviews         Review[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// =========================
+// ORDER ITEM
+// =========================
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  quantity  Float
+  price     Int
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =========================
+// REVIEW
+// =========================
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
