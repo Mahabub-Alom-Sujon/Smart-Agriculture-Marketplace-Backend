@@ -4,12 +4,13 @@ import cors from "cors";
 import config from "./config";
 import { notFoundHandler } from "./middlewares/not-found";
 import { globalErrorHandler } from "./middlewares/global-error";
+import {AuthRoutes} from "./module/auth/auth.route";
 
 const app: Application = express();
 
 app.use(
     cors({
-        origin: config.app_url,
+        origin: config.frontend_url,
         credentials: true,
     }),
 );
@@ -17,6 +18,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+app.use("/api/v1/auth", AuthRoutes);
 
 // 1. All your actual API Routes go here
 app.get("/", (req: Request, res: Response) => {

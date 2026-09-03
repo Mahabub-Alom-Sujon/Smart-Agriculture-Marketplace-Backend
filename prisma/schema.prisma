@@ -12,7 +12,7 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
+enum Role {
   FARMER
   BUYER
   EXPERT
@@ -24,6 +24,12 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   BLOCKED
+  DELETED
+}
+
+enum AuthProvider {
+  GOOGLE
+  CREDENTIAL
 }
 
 enum CropStatus {
@@ -58,23 +64,28 @@ enum ConsultationStatus {
 // ====================
 
 model User {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  password      String?
-  phone         String?
-  address       String?
-  image         String?
-  googleId      String?        @unique
-  role          UserRole       @default(BUYER)
-  status        UserStatus     @default(ACTIVE)
-  farms         Farm[]
-  products      Product[]
-  consultation  Consultation[]
-  expertAdvices ExpertAdvice[]
-  buyer         Buyer?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                 String         @id @default(uuid())
+  name               String
+  email              String         @unique
+  password           String?
+  phone              String?
+  address            String?
+  image              String?
+  googleId           String?        @unique
+  authProvider       AuthProvider   @default(CREDENTIAL)
+  emailVerified      Boolean        @default(false)
+  role               Role           @default(BUYER)
+  status             UserStatus     @default(ACTIVE)
+  needPasswordChange Boolean        @default(false)
+  isDeleted          Boolean        @default(false)
+  deletedAt          DateTime?
+  farms              Farm[]
+  products           Product[]
+  consultation       Consultation[]
+  expertAdvices      ExpertAdvice[]
+  buyer              Buyer?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 }
 
 // ====================
@@ -84,6 +95,7 @@ model User {
 model Farm {
   id        String   @id @default(uuid())
   farmName  String
+  email     String   @unique
   location  String
   landSize  Float?
   soilType  String?
@@ -96,6 +108,8 @@ model Farm {
 
 model Buyer {
   id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
   address   String?
   city      String?
   country   String?
