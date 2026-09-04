@@ -12,6 +12,10 @@ datasource db {
   provider = "postgresql"
 }
 
+// ====================
+// ENUMS
+// ====================
+
 enum Role {
   FARMER
   BUYER
@@ -79,32 +83,34 @@ model User {
   needPasswordChange Boolean        @default(false)
   isDeleted          Boolean        @default(false)
   deletedAt          DateTime?
-  farms              Farm[]
-  products           Product[]
-  consultation       Consultation[]
   expertAdvices      ExpertAdvice[]
+  farmer             Farmer?
   buyer              Buyer?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 }
 
 // ====================
-// FARM
+// FARMER MODEL
 // ====================
 
-model Farm {
-  id        String   @id @default(uuid())
-  farmName  String
-  email     String   @unique
-  location  String
-  landSize  Float?
-  soilType  String?
-  farmerId  String   @unique
-  farmer    User     @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  crops     Crop[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Farmer {
+  id            String  @id @default(uuid())
+  name          String
+  email         String  @unique
+  certification String?
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farms         Farm[]
+  products      Product[]
+  consultations Consultation[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
+
+// ====================
+// BUYER MODEL
+// ====================
 
 model Buyer {
   id        String   @id @default(uuid())
@@ -117,6 +123,23 @@ model Buyer {
   user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orders    Order[]
   reviews   Review[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ====================
+// FARM
+// ====================
+
+model Farm {
+  id        String   @id @default(uuid())
+  farmName  String
+  location  String
+  landSize  Float?
+  soilType  String?
+  farmerId  String   @unique
+  farmer    Farmer         @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  crops     Crop[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -168,7 +191,7 @@ model Product {
   farmerId    String
   categoryId  String
   category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  farmer      User          @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farmer      Farmer          @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orderItems  OrderItem[]
   reviews     Review[]
   createdAt   DateTime      @default(now())
@@ -187,7 +210,7 @@ model Consultation {
   status    ConsultationStatus @default(PENDING)
   advice    ExpertAdvice?
   farmerId  String
-  farmer    User               @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farmer    Farmer               @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 }

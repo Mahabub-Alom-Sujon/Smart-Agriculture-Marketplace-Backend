@@ -1,32 +1,100 @@
-import z from "zod";
+import { z } from "zod";
+import { Role } from "../../../generated/prisma/enums";
 
-const PatientRegistrationZodSchema = z.object({
-    name: z.string("Not A String!!!!!").min(3, "Name must atleast 3 characters long!!!").max(10),
-    email: z.email("Not email!!"),
-    password: z.string()
-        .min(8, "Password Must Minimum 8 Characters Long.")
-        .regex(/[a-z]/, "Password must contain atleast 1 Lowercase Letter")
-        .regex(/[A-Z]/, "Password must contain atleast 1 Uppercase Letter")
+const ManualRegistrationZodSchema = z.object({
+    body: z.object({
+        name: z
+            .string()
+            .trim()
+            .min(4, "Name must be at least 4 characters long")
+            .max(30, "Name cannot exceed 30 characters"),
 
-        .regex(/[0-9]/, "Password must contain atleast 1 Number")
-        .regex(/[^A-Za-z0-9]/, "Password must contain atleast 1 Special Character"),
-    patient: z.object({
-        contactNumber: z.string().optional()
-    }).optional()
-})
+        email: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .email("Invalid email format"),
+
+        password: z
+            .string()
+            .min(8, "Password must be at least 8 characters long")
+            .regex(
+                /[a-z]/,
+                "Password must contain at least 1 lowercase letter",
+            )
+            .regex(
+                /[A-Z]/,
+                "Password must contain at least 1 uppercase letter",
+            )
+            .regex(
+                /[0-9]/,
+                "Password must contain at least 1 number",
+            )
+            .regex(
+                /[^A-Za-z0-9]/,
+                "Password must contain at least 1 special character",
+            ),
+
+        phone: z
+            .string()
+            .trim()
+            .optional(),
+
+        address: z
+            .string()
+            .trim()
+            .optional(),
+
+        city: z
+            .string()
+            .trim()
+            .optional(),
+
+        country: z
+            .string()
+            .trim()
+            .optional(),
+
+        role: z.enum(
+            [Role.FARMER, Role.BUYER],
+            {
+                message: "Role must be either FARMER or BUYER",
+            },
+        ),
+    }),
+});
 
 const LoginZodSchema = z.object({
-    email : z.email(),
-    password: z.string()
-        .min(8, "Password Must Minimum 8 Characters Long.")
-        .regex(/[a-z]/, "Password must contain atleast 1 Lowercase Letter")
-        .regex(/[A-Z]/, "Password must contain atleast 1 Uppercase Letter")
+    body: z.object({
+        email: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .email("Invalid email format"),
 
-        .regex(/[0-9]/, "Password must contain atleast 1 Number")
-        .regex(/[^A-Za-z0-9]/, "Password must contain atleast 1 Special Character"),
-})
+        password: z
+            .string()
+            .min(1, "Password is required"),
+    }),
+});
+
+const GoogleLoginZodSchema = z.object({
+    body: z.object({
+        idToken: z
+            .string()
+            .min(1, "Google ID Token is required"),
+
+        role: z.enum(
+            [Role.FARMER, Role.BUYER],
+            {
+                message: "Role must be either FARMER or BUYER",
+            },
+        ),
+    }),
+});
 
 export const UserValidation = {
-    PatientRegistrationZodSchema,
-    LoginZodSchema
-}
+    ManualRegistrationZodSchema,
+    LoginZodSchema,
+    GoogleLoginZodSchema,
+};

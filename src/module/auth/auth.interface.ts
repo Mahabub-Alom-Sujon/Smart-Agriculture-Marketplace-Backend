@@ -9,10 +9,13 @@ export interface ILoginUserPayload {
 export interface IRegisterPatientPayload {
     name: string;
     email: string;
-    password: string;
-    // patient : {
-    //     contactNumber ?: string
-    // }
+    password?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    role: Role;
+
 }
 
 

@@ -5,7 +5,66 @@ import { sendResponse } from '../../utils/send-response'
 import { IRequestUser } from './auth.interface'
 import { AuthService } from './auth.service'
 
+const registerUser = catchAsync(async (req: Request, res: Response)=>{
+    const payload = req.body;
+    const result = await AuthService.registerUser(payload);
 
+    const { accessToken, refreshToken, user } = result;
+
+    res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 3, //  3 day
+    });
+
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    });
+
+    sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "User registered successfully",
+        data: {
+            user,
+            accessToken,
+            refreshToken,
+        },
+    });
+})
+
+const loginUser = catchAsync(async (req: Request, res: Response) => {
+    const payload = req.body;
+    const result = await AuthService.loginUser(payload);
+    const { accessToken, refreshToken } = result;
+
+    res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 3, //  3 day
+    });
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    });
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "User logged in successfully",
+        data: {
+            accessToken,
+            refreshToken,
+        },
+    });
+});
 
 const getMe = catchAsync(async (req: Request, res: Response) => {
     const user = req.user as unknown as IRequestUser
@@ -85,6 +144,8 @@ const googleLogin = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const AuthController = {
+    registerUser,
+    loginUser,
     getMe,
     refreshToken,
     googleLogin
