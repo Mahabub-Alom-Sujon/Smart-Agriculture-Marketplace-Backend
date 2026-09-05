@@ -6,6 +6,7 @@ import { notFoundHandler } from "./middlewares/not-found";
 import { globalErrorHandler } from "./middlewares/global-error";
 import {AuthRoutes} from "./module/auth/auth.route";
 import {CategoryRoutes} from "./module/category/category.route";
+import {ProductRoutes} from "./module/product/product.route";
 
 const app: Application = express();
 
@@ -22,6 +23,7 @@ app.use(cookieParser());
 
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/categories", CategoryRoutes);
+app.use("/api/v1/products", ProductRoutes);
 // 1. All your actual API Routes go here
 app.get("/", (req: Request, res: Response) => {
     res.send("Hello, World!");
