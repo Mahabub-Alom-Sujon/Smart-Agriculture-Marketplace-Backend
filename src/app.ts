@@ -5,6 +5,7 @@ import config from "./config";
 import { notFoundHandler } from "./middlewares/not-found";
 import { globalErrorHandler } from "./middlewares/global-error";
 import {AuthRoutes} from "./module/auth/auth.route";
+import {CategoryRoutes} from "./module/category/category.route";
 
 const app: Application = express();
 
@@ -20,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api/v1/auth", AuthRoutes);
-
+app.use("/api/v1/categories", CategoryRoutes);
 // 1. All your actual API Routes go here
 app.get("/", (req: Request, res: Response) => {
     res.send("Hello, World!");

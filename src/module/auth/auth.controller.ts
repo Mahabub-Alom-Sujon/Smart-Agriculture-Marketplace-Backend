@@ -15,7 +15,7 @@ const registerUser = catchAsync(async (req: Request, res: Response)=>{
         httpOnly: true,
         secure: false,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 3, //  3 day
+        maxAge: 1000 * 60 * 60 * 24 * 5, //  3 day
     });
 
     res.cookie("refreshToken", refreshToken, {
@@ -46,7 +46,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
         httpOnly: true,
         secure: false,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 3, //  3 day
+        maxAge: 1000 * 60 * 60 * 24 * 5, //  5 day
     });
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
@@ -92,7 +92,7 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
         httpOnly: true,
         secure: false,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
+        maxAge: 1000 * 60 * 60 * 24 * 5 // 24 hour or 1 day
     })
     res.cookie("refreshToken", newRefreshToken, {
         httpOnly: true,
