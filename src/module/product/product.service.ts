@@ -10,6 +10,7 @@ const createProduct = async (payload: CreateProduct) => {
     const category = await prisma.category.findUnique({
         where: {
             id: categoryId,
+            isDeleted: false,
         },
     });
 
@@ -67,7 +68,10 @@ const getAllProducts = async (query:IProductQuery)=>{
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
     const skip = (pageNumber - 1) * limitNumber;
-    const where: any = {};
+
+    const where: any = {
+        isDeleted: false,
+    };
 
     // Search
     if (searchTerm) {
@@ -156,6 +160,7 @@ const getSingleProduct = async (id: string) => {
     const result = await prisma.product.findUnique({
         where: {
             id,
+            isDeleted: false,
         },
         include: {
             category: true,
@@ -185,6 +190,7 @@ const updateProduct = async (id: string, payload: UpdateProduct) => {
     const product = await prisma.product.findUnique({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
@@ -197,6 +203,7 @@ const updateProduct = async (id: string, payload: UpdateProduct) => {
         const category = await prisma.category.findUnique({
             where: {
                 id: payload.categoryId,
+                isDeleted: false,
             },
         });
 
@@ -240,19 +247,25 @@ const updateProduct = async (id: string, payload: UpdateProduct) => {
 };
 
 const deleteProduct = async (id: string) => {
-    const product = await prisma.product.findUnique({
+    const product = await prisma.product.findFirst({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
     if (!product) {
-        throw new Error( 'Product not found');
+        throw new Error('Product not found');
     }
 
-    const result = await prisma.product.delete({
+    const result = await prisma.product.update({
         where: {
             id,
+        },
+        data: {
+            isDeleted: true,
+            deletedAt: new Date(),
+            status: ProductStatus.INACTIVE,
         },
     });
 
@@ -265,6 +278,7 @@ const getMyProducts = async (userId: string) => {
     }
     const products = await prisma.product.findMany({
         where: {
+            isDeleted: false,
             farmer: {
                 userId: userId,
             },
@@ -297,6 +311,7 @@ const getProductsByCategory = async (
     const category = await prisma.category.findUnique({
         where: {
             id: categoryId,
+            isDeleted: false,
         },
     });
 
@@ -308,6 +323,7 @@ const getProductsByCategory = async (
         where: {
             categoryId,
             status: 'ACTIVE',
+            isDeleted: false,
         },
         include: {
             category:{
@@ -338,6 +354,7 @@ const updateProductStatus = async (
     const product = await prisma.product.findUnique({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
@@ -365,6 +382,4 @@ export const productService = {
     getMyProducts,
     getProductsByCategory,
     updateProductStatus
-
-
 }
