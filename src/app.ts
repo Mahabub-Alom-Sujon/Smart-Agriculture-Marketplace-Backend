@@ -10,6 +10,7 @@ import {ProductRoutes} from "./module/product/product.route";
 import {AdminRoutes} from "./module/admin/admin.route";
 import {FarmRoutes} from "./module/farm/farm.route";
 import {CropRoutes} from "./module/crop/crop.route";
+import {OrderRoutes} from "./module/order/order.route";
 
 const app: Application = express();
 
@@ -28,6 +29,7 @@ app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/farms", FarmRoutes);
 app.use("/api/v1/crops", CropRoutes);
+app.use("/api/v1/orders", OrderRoutes);
 app.use("/api/v1/categories", CategoryRoutes);
 app.use("/api/v1/products", ProductRoutes);
 // 1. All your actual API Routes go here

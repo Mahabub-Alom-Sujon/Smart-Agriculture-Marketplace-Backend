@@ -50,10 +50,14 @@ enum ProductStatus {
 
 enum OrderStatus {
   PENDING
-  CONFIRMED
+  PAYMENT_PENDING
+  PAID
   PROCESSING
+  SHIPPED
   DELIVERED
   CANCELLED
+  REFUNDED
+  CONFIRMED
 }
 
 enum ConsultationStatus {
