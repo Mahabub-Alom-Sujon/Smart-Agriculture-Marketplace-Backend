@@ -7,15 +7,9 @@ import {categoryValidation} from "./category.validation";
 
 const router = Router();
 
-// Create Category
-router.post(
-    "/",
-    auth(Role.ADMIN, Role.SUPER_ADMIN),
-    validateRequest(
-        categoryValidation.createCategoryValidation
-    ),
-    categoryController.createCategory,
-);
+// ==============================
+// Public Routes
+// ==============================
 
 // Get All Categories
 router.get(
@@ -28,6 +22,22 @@ router.get(
     "/:id",
     categoryController.getSingleCategory,
 );
+
+// ==============================
+// Admin Routes
+// ==============================
+
+// Create Category
+router.post(
+    "/",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    validateRequest(
+        categoryValidation.createCategoryValidation
+    ),
+    categoryController.createCategory,
+);
+
+
 
 // Update Category
 router.patch(

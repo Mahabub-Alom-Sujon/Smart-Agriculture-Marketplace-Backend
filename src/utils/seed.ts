@@ -99,6 +99,9 @@ export const seedTesterAdmin = async () => {
                 needPasswordChange: false,
                 emailVerified: true,
             },
+            omit:{
+                password:true
+            }
         });
 
         console.log("Tester Admin Created : ", testerAdmin);

@@ -95,12 +95,12 @@ model User {
 // ====================
 
 model Farmer {
-  id            String  @id @default(uuid())
+  id            String         @id @default(uuid())
   name          String
-  email         String  @unique
+  email         String         @unique
   certification String?
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   farms         Farm[]
   products      Product[]
   consultations Consultation[]
@@ -137,8 +137,8 @@ model Farm {
   location  String
   landSize  Float?
   soilType  String?
-  farmerId  String   @unique
-  farmer    Farmer         @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farmerId  String
+  farmer    Farmer   @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   crops     Crop[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -191,28 +191,11 @@ model Product {
   farmerId    String
   categoryId  String
   category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  farmer      Farmer          @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farmer      Farmer        @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orderItems  OrderItem[]
   reviews     Review[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-}
-
-// ====================
-// CONSULTATION
-// ====================
-
-model Consultation {
-  id        String             @id @default(uuid())
-  cropName  String?
-  problem   String
-  image     String?
-  status    ConsultationStatus @default(PENDING)
-  advice    ExpertAdvice?
-  farmerId  String
-  farmer    Farmer               @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
 }
 
 // ====================
@@ -231,6 +214,23 @@ model ExpertAdvice {
   expert         User         @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+// ====================
+// CONSULTATION
+// ====================
+
+model Consultation {
+  id        String             @id @default(uuid())
+  cropName  String?
+  problem   String
+  image     String?
+  status    ConsultationStatus @default(PENDING)
+  advice    ExpertAdvice?
+  farmerId  String
+  farmer    Farmer             @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 }
 
 // ====================
