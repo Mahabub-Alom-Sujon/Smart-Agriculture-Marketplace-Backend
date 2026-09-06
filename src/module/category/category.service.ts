@@ -28,7 +28,7 @@ const getAllCategories = async () => {
 };
 
 const getSingleCategory=async (id: string)=> {
-    const result = await prisma.category.findUniqueOrThrow({
+    const result = await prisma.category.findFirst({
         where: {
             id,
             isDeleted: false,
@@ -39,7 +39,7 @@ const getSingleCategory=async (id: string)=> {
 }
 
 const updateCategory = async (id: string, payload: CreateCategory) => {
-    const category = await prisma.category.findUnique({
+    const category = await prisma.category.findFirst({
         where: {
             id,
             isDeleted: false,

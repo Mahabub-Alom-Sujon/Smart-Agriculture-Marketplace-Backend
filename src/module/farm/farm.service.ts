@@ -32,6 +32,9 @@ const createFarm = async (
 
 const getAllFarms = async () => {
     const farms = await prisma.farm.findMany({
+        where: {
+            isDeleted: false,
+        },
         include: {
             farmer: true,
             crops: true,
@@ -45,9 +48,10 @@ const getAllFarms = async () => {
 };
 
 const getFarmById = async (id: string) => {
-    const farm = await prisma.farm.findUnique({
+    const farm = await prisma.farm.findFirst({
         where: {
             id,
+            isDeleted: false,
         },
         include: {
             farmer: true,
@@ -78,6 +82,7 @@ const getFarmsByFarmer = async (
     const farms = await prisma.farm.findMany({
         where: {
             farmerId,
+            isDeleted: false,
         },
         include: {
             crops: true,
@@ -95,9 +100,10 @@ const updateFarm = async (
     farmerId: string,
     payload: IUpdateFarm,
 ) => {
-    const farm = await prisma.farm.findUnique({
+    const farm = await prisma.farm.findFirst({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
@@ -126,7 +132,7 @@ const deleteFarm = async (
     id: string,
     farmerId: string,
 ) => {
-    const farm = await prisma.farm.findUnique({
+    const farm = await prisma.farm.findFirst({
         where: {
             id,
         },
