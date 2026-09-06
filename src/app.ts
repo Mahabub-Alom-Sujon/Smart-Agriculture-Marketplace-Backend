@@ -11,6 +11,7 @@ import {AdminRoutes} from "./module/admin/admin.route";
 import {FarmRoutes} from "./module/farm/farm.route";
 import {CropRoutes} from "./module/crop/crop.route";
 import {OrderRoutes} from "./module/order/order.route";
+import {PaymentRoutes} from "./module/payment/payment.route";
 
 const app: Application = express();
 
@@ -21,6 +22,10 @@ app.use(
     }),
 );
 
+app.use(
+    "/api/v1/payments/webhook",
+    express.raw({ type: "application/json" })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -30,6 +35,7 @@ app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/farms", FarmRoutes);
 app.use("/api/v1/crops", CropRoutes);
 app.use("/api/v1/orders", OrderRoutes);
+app.use("/api/v1/payments", PaymentRoutes);
 app.use("/api/v1/categories", CategoryRoutes);
 app.use("/api/v1/products", ProductRoutes);
 // 1. All your actual API Routes go here
