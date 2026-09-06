@@ -104,6 +104,8 @@ model Farmer {
   farms         Farm[]
   products      Product[]
   consultations Consultation[]
+  isDeleted     Boolean        @default(false)
+  deletedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -113,18 +115,20 @@ model Farmer {
 // ====================
 
 model Buyer {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   name      String
-  email     String   @unique
+  email     String    @unique
   address   String?
   city      String?
   country   String?
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orders    Order[]
   reviews   Review[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 // ====================
@@ -132,16 +136,18 @@ model Buyer {
 // ====================
 
 model Farm {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   farmName  String
   location  String
   landSize  Float?
   soilType  String?
   farmerId  String
-  farmer    Farmer   @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  farmer    Farmer    @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   crops     Crop[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 // ====================
@@ -157,6 +163,8 @@ model Crop {
   status       CropStatus @default(PLANNED)
   farmId       String
   farm         Farm       @relation(fields: [farmId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted    Boolean    @default(false)
+  deletedAt    DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -171,6 +179,8 @@ model Category {
   description String?
   image       String?
   products    Product[]
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -194,6 +204,8 @@ model Product {
   farmer      Farmer        @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orderItems  OrderItem[]
   reviews     Review[]
+  isDeleted   Boolean       @default(false)
+  deletedAt   DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
@@ -212,6 +224,8 @@ model ExpertAdvice {
   expertId       String
   consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   expert         User         @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted      Boolean      @default(false)
+  deletedAt      DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
@@ -229,6 +243,8 @@ model Consultation {
   advice    ExpertAdvice?
   farmerId  String
   farmer    Farmer             @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted Boolean            @default(false)
+  deletedAt DateTime?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 }
@@ -248,6 +264,8 @@ model Order {
   buyer           Buyer       @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orderItems      OrderItem[]
   reviews         Review[]
+  isDeleted       Boolean     @default(false)
+  deletedAt       DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
@@ -257,15 +275,17 @@ model Order {
 // =========================
 
 model OrderItem {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   quantity  Float
   price     Int
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 // =========================
@@ -273,15 +293,17 @@ model OrderItem {
 // =========================
 
 model Review {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   rating    Int
   comment   String?
   buyerId   String
-  buyer     Buyer    @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  buyer     Buyer     @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }

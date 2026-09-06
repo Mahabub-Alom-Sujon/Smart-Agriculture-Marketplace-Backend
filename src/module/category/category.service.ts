@@ -2,13 +2,16 @@ import {prisma} from "../../lib/prisma";
 import {CreateCategory} from "./category.interface";
 
 const createCategory = async (payload: CreateCategory) => {
-    return prisma.category.createMany({
+    return prisma.category.create({
         data: payload,
     });
 };
 
 const getAllCategories = async () => {
     const result = await prisma.category.findMany({
+        where: {
+            isDeleted: false,
+        },
         include: {
             _count: {
                 select: {
@@ -28,6 +31,7 @@ const getSingleCategory=async (id: string)=> {
     const result = await prisma.category.findUniqueOrThrow({
         where: {
             id,
+            isDeleted: false,
         },
 
     })
@@ -38,6 +42,7 @@ const updateCategory = async (id: string, payload: CreateCategory) => {
     const category = await prisma.category.findUnique({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
@@ -63,6 +68,7 @@ const deleteCategory = async (id: string ) => {
     const category = await prisma.category.findUnique({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
@@ -70,9 +76,19 @@ const deleteCategory = async (id: string ) => {
         throw new Error('Category not found' );
     }
 
-    const result = await prisma.category.delete({
+    // const result = await prisma.category.delete({
+    //     where: {
+    //         id,
+    //     },
+    // });
+
+    const result = await prisma.category.update({
         where: {
             id,
+        },
+        data: {
+            isDeleted: true,
+            deletedAt: new Date(),
         },
     });
 

@@ -2,21 +2,21 @@ import { z } from "zod";
 
 export const createCategoryValidation = z.object({
     body: z.object({
-        name: z
-            .string()
-            .min(2, "Category name must be at least 2 characters")
-            .max(100, "Category name cannot exceed 100 characters"),
+            name: z
+                .string()
+                .min(2, "Category name must be at least 2 characters")
+                .max(100, "Category name cannot exceed 100 characters"),
 
-        description: z
-            .string()
-            .max(500, "Description cannot exceed 500 characters")
-            .optional(),
+            description: z
+                .string()
+                .max(500, "Description cannot exceed 500 characters")
+                .optional(),
 
-        image: z
-            .string()
-            .url("Image must be a valid URL")
-            .optional(),
-    }),
+            image: z
+                .string()
+                .url("Image must be a valid URL")
+                .optional(),
+        })
 });
 
 export const updateCategoryValidation = z.object({
