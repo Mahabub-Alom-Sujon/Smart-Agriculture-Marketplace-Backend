@@ -6,10 +6,10 @@ dotenv.config({path: path.join(process.cwd(), ".env") });
 export default {
     node_env: process.env.NODE_ENV,
     port: process.env.PORT || 5000,
-    database_url: process.env.DATABASE_URL!, // 🟢 যোগ করা হয়েছে
-    bak_url: process.env.APP_URL!,           // 🟢 যোগ করা হয়েছে
-    frontend_url: process.env.FRONTEND_URL!, // 🟢 অত্যন্ত জরুরি: এখানে '!' যোগ করা হলো
-    bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS!, // 🟢 যোগ করা হয়েছে
+    database_url: process.env.DATABASE_URL!,
+    bak_url: process.env.APP_URL!,
+    frontend_url: process.env.FRONTEND_URL!,
+    bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS!,
 
     // JWT সেটিংস
     jwt_access_secret: process.env.JWT_ACCESS_SECRET!,

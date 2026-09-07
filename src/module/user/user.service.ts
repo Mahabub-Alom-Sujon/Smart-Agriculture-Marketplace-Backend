@@ -59,6 +59,10 @@ const uploadProfileImage = async (buffer: Buffer, userId: string) => {
     return updatedUser;
 }
 
+// const uploadProfile =async () =>{
+//
+// }
 export const UserServices = {
     uploadProfileImage,
+    //uploadProfile
 };

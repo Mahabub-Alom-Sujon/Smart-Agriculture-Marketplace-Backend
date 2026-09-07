@@ -13,6 +13,7 @@ import {CropRoutes} from "./module/crop/crop.route";
 import {OrderRoutes} from "./module/order/order.route";
 import {PaymentRoutes} from "./module/payment/payment.route";
 import {UserRoutes} from "./module/user/user.route";
+import {AuditLogRoutes} from "./module/auditLog/ auditLog.route";
 
 const app: Application = express();
 
@@ -34,6 +35,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
 app.use("/api/v1/admin", AdminRoutes);
+app.use("/api/v1/audit-logs", AuditLogRoutes);
 app.use("/api/v1/farms", FarmRoutes);
 app.use("/api/v1/crops", CropRoutes);
 app.use("/api/v1/orders", OrderRoutes);
