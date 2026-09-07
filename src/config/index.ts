@@ -24,6 +24,10 @@ export default {
     stripe_product_id: process.env.STRIPE_PRODUCT_ID!,
     stripe_product_price_id: process.env.STRIPE_PRODUCT_PRICE_ID!,
 
+    cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+    cloudinary_api_key: process.env.CLOUDINARY_API_KEY!,
+    cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET!,
+
     // ওঅথ (OAuth) সেটিংস
     google_client_id: process.env.GOOGLE_CLIENT_ID!,
 
