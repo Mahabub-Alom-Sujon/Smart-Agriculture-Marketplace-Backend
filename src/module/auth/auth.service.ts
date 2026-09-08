@@ -110,7 +110,9 @@ const loginUser =async (payload:ILoginUserPayload)=>{
     const email = payload.email.trim().toLowerCase();
 
     const user = await prisma.user.findUnique({
-        where: { email },
+        where: {
+            email ,
+        },
     });
 
     if (!user) {

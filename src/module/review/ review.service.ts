@@ -1,6 +1,7 @@
 import {prisma} from "../../lib/prisma";
 import { ICreateReview, IUpdateReview } from "./review.interface";
 import {ReviewWhereInput} from "../../../generated/prisma/models/Review";
+import {Role} from "../../../generated/prisma/enums";
 
 // ==============================
 // Create Review
@@ -339,6 +340,86 @@ const deleteReview = async (id: string, userId: string) => {
 
     return result;
 };
+
+// ==============================
+// Delete Review (Role-based)
+// ==============================
+// const deleteReview = async (id: string, userId: string, role: Role) => {
+//
+//     // ১. যদি SUPER_ADMIN হয় -> সরাসরি Permanent/Hard Delete হবে
+//     if (role === Role.SUPER_ADMIN) {
+//         const review = await prisma.review.findFirst({
+//             where: { id }
+//         });
+//
+//         if (!review) {
+//             throw new Error("Review not found");
+//         }
+//
+//         const result = await prisma.review.delete({
+//             where: { id },
+//         });
+//
+//         return result;
+//     }
+//
+//     // ২. যদি ADMIN হয় -> যেকোনো রিভিউ Soft Delete করতে পারবে
+//     if (role === Role.ADMIN) {
+//         const review = await prisma.review.findFirst({
+//             where: { id, isDeleted: false }
+//         });
+//
+//         if (!review) {
+//             throw new Error("Review not found or already deleted");
+//         }
+//
+//         const result = await prisma.review.update({
+//             where: { id },
+//             data: {
+//                 isDeleted: true,
+//                 deletedAt: new Date(),
+//             },
+//         });
+//
+//         return result;
+//     }
+//
+//     // ৩. যদি BUYER হয় -> শুধুমাত্র নিজের রিভিউ Soft Delete করতে পারবে
+//     if (role === Role.BUYER) {
+//         const buyer = await prisma.buyer.findUnique({
+//             where: { userId },
+//         });
+//
+//         if (!buyer) {
+//             throw new Error("Buyer not found");
+//         }
+//
+//         const review = await prisma.review.findFirst({
+//             where: {
+//                 id,
+//                 buyerId: buyer.id,
+//                 isDeleted: false,
+//             },
+//         });
+//
+//         if (!review) {
+//             throw new Error("Review not found or you are not authorized to delete it");
+//         }
+//
+//         const result = await prisma.review.update({
+//             where: { id },
+//             data: {
+//                 isDeleted: true,
+//                 deletedAt: new Date(),
+//             },
+//         });
+//
+//         return result;
+//     }
+//
+//     // ৪. অন্য কোনো রোল (যেমন: FARMER, EXPERT) হলে এরর থ্রো করবে
+//     throw new Error("You do not have permission to delete this review");
+// };
 
 // ==============================
 // Admin Delete Review

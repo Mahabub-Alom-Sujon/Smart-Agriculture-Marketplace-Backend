@@ -85,28 +85,28 @@ enum PaymentProvider {
 // ====================
 
 model User {
-  id                 String         @id @default(uuid())
+  id                 String       @id @default(uuid())
   name               String
-  email              String         @unique
+  email              String       @unique
   password           String?
   phone              String?
   address            String?
-  imageUrl           String?        @default("")
-  imagePublicId      String         @default("")
-  googleId           String?        @unique
-  authProvider       AuthProvider   @default(CREDENTIAL)
-  emailVerified      Boolean        @default(false)
-  role               Role           @default(BUYER)
-  status             UserStatus     @default(ACTIVE)
-  needPasswordChange Boolean        @default(false)
-  isDeleted          Boolean        @default(false)
+  imageUrl           String?      @default("")
+  imagePublicId      String       @default("")
+  googleId           String?      @unique
+  authProvider       AuthProvider @default(CREDENTIAL)
+  emailVerified      Boolean      @default(false)
+  role               Role         @default(BUYER)
+  status             UserStatus   @default(ACTIVE)
+  needPasswordChange Boolean      @default(false)
+  isDeleted          Boolean      @default(false)
   deletedAt          DateTime?
-  expertAdvices      ExpertAdvice[]
   auditLogs          AuditLog[]
   farmer             Farmer?
   buyer              Buyer?
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  expert             Expert?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 }
 
 // ====================
@@ -149,6 +149,48 @@ model Buyer {
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+// ====================
+// EXPERT MODEL
+// ====================
+
+model Expert {
+  id             String         @id @default(uuid())
+  name           String
+  email          String         @unique
+  city           String?
+  specialization String? // এক্সপার্টের দক্ষতার ক্ষেত্র (যেমন: মাটি, পোকা দমন)
+  qualification  String? // শিক্ষাগত যোগ্যতা (যেমন: BSc in Agriculture)
+  experience     Float? // কত বছরের অভিজ্ঞতা আছে
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  expertAdvices  ExpertAdvice[]
+  isDeleted      Boolean        @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+// ====================
+// CONSULTATION
+// ====================
+
+model Consultation {
+  id        String             @id @default(uuid())
+  cropName  String?
+  problem   String
+  image     String?
+  status    ConsultationStatus @default(PENDING)
+  advice    ExpertAdvice?
+  farmerId  String
+  farmer    Farmer             @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted Boolean            @default(false)
+  deletedAt DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([farmerId])
 }
 
 // ====================
@@ -210,6 +252,26 @@ model Crop {
 }
 
 // ====================
+// EXPERT ADVICE
+// ====================
+
+model ExpertAdvice {
+  id             String       @id @default(uuid())
+  diagnosis      String
+  recommendation String
+  fertilizer     String?
+  pesticide      String?
+  consultationId String       @unique
+  expertId       String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  expert         Expert       @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  isDeleted      Boolean      @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// ====================
 // CATEGORY
 // ====================
 
@@ -248,45 +310,6 @@ model Product {
   deletedAt   DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-}
-
-// ====================
-// EXPERT ADVICE
-// ====================
-
-model ExpertAdvice {
-  id             String       @id @default(uuid())
-  diagnosis      String
-  recommendation String
-  fertilizer     String?
-  pesticide      String?
-  consultationId String       @unique
-  expertId       String
-  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  expert         User         @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  isDeleted      Boolean      @default(false)
-  deletedAt      DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-}
-
-// ====================
-// CONSULTATION
-// ====================
-
-model Consultation {
-  id        String             @id @default(uuid())
-  cropName  String?
-  problem   String
-  image     String?
-  status    ConsultationStatus @default(PENDING)
-  advice    ExpertAdvice?
-  farmerId  String
-  farmer    Farmer             @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  isDeleted Boolean            @default(false)
-  deletedAt DateTime?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
 }
 
 // ====================
