@@ -352,7 +352,7 @@ model Payment {
 
 model Review {
   id        String    @id @default(uuid())
-  rating    Int
+  rating    Float
   comment   String?
   buyerId   String
   buyer     Buyer     @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)

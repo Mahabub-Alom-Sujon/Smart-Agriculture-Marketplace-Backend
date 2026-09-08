@@ -14,6 +14,7 @@ import {OrderRoutes} from "./module/order/order.route";
 import {PaymentRoutes} from "./module/payment/payment.route";
 import {UserRoutes} from "./module/user/user.route";
 import {AuditLogRoutes} from "./module/auditLog/ auditLog.route";
+import { ReviewRoutes } from "./module/review/review.route";
 
 const app: Application = express();
 
@@ -42,6 +43,7 @@ app.use("/api/v1/orders", OrderRoutes);
 app.use("/api/v1/payments", PaymentRoutes);
 app.use("/api/v1/categories", CategoryRoutes);
 app.use("/api/v1/products", ProductRoutes);
+app.use("/api/v1/reviews", ReviewRoutes);
 // 1. All your actual API Routes go here
 app.get("/", (req: Request, res: Response) => {
     res.send("Hello, World!");

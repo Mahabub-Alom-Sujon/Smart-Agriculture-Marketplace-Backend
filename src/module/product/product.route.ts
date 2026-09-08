@@ -8,6 +8,9 @@ import {productValidation, updateProductStatusValidation} from "./product.valida
 const router = Router();
 
 // Public
+
+//http://localhost:5000/api/v1/products?searchTerm=tomato&categoryId=cat123&farmerId=farmer123&status=AVAILABLE&minPrice=100&maxPrice=500&page=1&limit=10&sortBy=price&sortOrder=asc
+
 router.get('/', productController.getAllProducts);
 
 
