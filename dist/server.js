@@ -3569,9 +3569,96 @@ var uploadProfileImage = async (buffer, userId) => {
   }
   return updatedUser;
 };
+var updateProfile = async (userId, role, payload) => {
+  const isUserExist = await prisma.user.findUnique({
+    where: { id: userId, isDeleted: false }
+  });
+  if (!isUserExist) {
+    throw new Error("User account not found");
+  }
+  const {
+    name,
+    phone,
+    address,
+    imageUrl,
+    imagePublicId,
+    // User fields
+    city,
+    country,
+    // Buyer fields
+    certification,
+    // Farmer fields
+    specialization,
+    qualification,
+    experience
+    // Expert fields
+  } = payload;
+  const userData = {};
+  if (name) userData.name = name;
+  if (phone) userData.phone = phone;
+  if (address) userData.address = address;
+  if (imageUrl) userData.imageUrl = imageUrl;
+  if (imagePublicId) userData.imagePublicId = imagePublicId;
+  const result = await prisma.$transaction(async (tx) => {
+    if (Object.keys(userData).length > 0) {
+      await tx.user.update({
+        where: { id: userId },
+        data: userData
+      });
+    }
+    if (role === Role.BUYER) {
+      const buyerData = {};
+      if (name) buyerData.name = name;
+      if (address) buyerData.address = address;
+      if (city) buyerData.city = city;
+      if (country) buyerData.country = country;
+      if (Object.keys(buyerData).length > 0) {
+        await tx.buyer.update({
+          where: { userId },
+          data: buyerData
+        });
+      }
+    } else if (role === Role.FARMER) {
+      const farmerData = {};
+      if (name) farmerData.name = name;
+      if (certification) farmerData.certification = certification;
+      if (Object.keys(farmerData).length > 0) {
+        await tx.farmer.update({
+          where: { userId },
+          data: farmerData
+        });
+      }
+    } else if (role === Role.EXPERT) {
+      const expertData = {};
+      if (name) expertData.name = name;
+      if (city) expertData.city = city;
+      if (specialization) expertData.specialization = specialization;
+      if (qualification) expertData.qualification = qualification;
+      if (experience) expertData.experience = Number(experience);
+      if (Object.keys(expertData).length > 0) {
+        await tx.expert.update({
+          where: { userId },
+          data: expertData
+        });
+      }
+    }
+    return await tx.user.findUnique({
+      where: { id: userId },
+      include: {
+        buyer: role === Role.BUYER,
+        farmer: role === Role.FARMER,
+        expert: role === Role.EXPERT
+      },
+      omit: {
+        password: true
+      }
+    });
+  });
+  return result;
+};
 var UserServices = {
-  uploadProfileImage
-  //uploadProfile
+  uploadProfileImage,
+  updateProfile
 };
 
 // src/module/user/user.controller.ts
@@ -3591,8 +3678,48 @@ var uploadProfileImage2 = catchAsync(async (req, res) => {
     data: result
   });
 });
+var updateProfile2 = catchAsync(async (req, res) => {
+  const user = req.user;
+  const result = await UserServices.updateProfile(
+    user.userId,
+    user.role,
+    req.body
+  );
+  sendResponse(res, {
+    statusCode: httpStatus8.OK,
+    success: true,
+    message: "Profile updated successfully",
+    data: result
+  });
+});
 var UserController = {
-  uploadProfileImage: uploadProfileImage2
+  uploadProfileImage: uploadProfileImage2,
+  updateProfile: updateProfile2
+};
+
+// src/module/user/user.validation.ts
+import { z as z8 } from "zod";
+var updateProfileValidationSchema = z8.object({
+  body: z8.object({
+    // User টেবিলের কমন ফিল্ডসমূহ
+    name: z8.string().optional(),
+    phone: z8.string().optional(),
+    address: z8.string().optional(),
+    imageUrl: z8.string().optional(),
+    imagePublicId: z8.string().optional(),
+    // Buyer টেবিলের ফিল্ডসমূহ
+    city: z8.string().optional(),
+    country: z8.string().optional(),
+    // Farmer টেবিলের ফিল্ডসমূহ
+    certification: z8.string().optional(),
+    // Expert টেবিলের ফিল্ডসমূহ
+    specialization: z8.string().optional(),
+    qualification: z8.string().optional(),
+    experience: z8.number().optional()
+  })
+});
+var ProfileValidation = {
+  updateProfileValidationSchema
 };
 
 // src/module/user/user.route.ts
@@ -3602,6 +3729,13 @@ router9.patch(
   auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER, Role.BUYER),
   upload.single("profileImage"),
   UserController.uploadProfileImage
+);
+router9.patch(
+  "/update-profile",
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.EXPERT, Role.FARMER, Role.BUYER),
+  // সব অথেনটিকেটেড রোল পারমিটেড
+  validateRequest(ProfileValidation.updateProfileValidationSchema),
+  UserController.updateProfile
 );
 var UserRoutes = router9;
 
@@ -4192,28 +4326,28 @@ var ReviewController = {
 };
 
 // src/module/review/ review.validation.ts
-import { z as z8 } from "zod";
-var createReviewValidationSchema = z8.object({
-  body: z8.object({
-    rating: z8.number({
+import { z as z9 } from "zod";
+var createReviewValidationSchema = z9.object({
+  body: z9.object({
+    rating: z9.number({
       message: "Rating must be a number"
     }).min(1, "Rating must be at least 1").max(5, "Rating cannot be more than 5"),
-    comment: z8.string().trim().max(1e3, "Comment cannot exceed 1000 characters").optional(),
-    buyerId: z8.string({
+    comment: z9.string().trim().max(1e3, "Comment cannot exceed 1000 characters").optional(),
+    buyerId: z9.string({
       message: "Buyer ID must be a string"
     }).uuid("Invalid buyer ID").optional(),
-    productId: z8.string({
+    productId: z9.string({
       message: "Product ID is required"
     }).uuid("Invalid product ID"),
-    orderId: z8.string({
+    orderId: z9.string({
       message: "Order ID is required"
     }).uuid("Invalid order ID")
   })
 });
-var updateReviewValidationSchema = z8.object({
-  body: z8.object({
-    rating: z8.number().int("Rating must be an integer").min(1, "Rating must be at least 1").max(5, "Rating cannot be more than 5").optional(),
-    comment: z8.string().trim().max(1e3, "Comment cannot exceed 1000 characters").optional()
+var updateReviewValidationSchema = z9.object({
+  body: z9.object({
+    rating: z9.number().int("Rating must be an integer").min(1, "Rating must be at least 1").max(5, "Rating cannot be more than 5").optional(),
+    comment: z9.string().trim().max(1e3, "Comment cannot exceed 1000 characters").optional()
   }).refine(
     (data) => data.rating !== void 0 || data.comment !== void 0,
     {
@@ -4615,28 +4749,28 @@ var ExpertController = {
 };
 
 // src/module/expert/expert.validation.ts
-import { z as z9 } from "zod";
-var registerExpertValidationSchema = z9.object({
-  body: z9.object({
-    name: z9.string().min(2, "Name must be at least 2 characters").max(100, "Name must not exceed 100 characters"),
-    email: z9.string().email("Invalid email address").trim().toLowerCase(),
-    password: z9.string().min(6, "Password must be at least 6 characters"),
-    phone: z9.string().optional(),
-    address: z9.string().optional(),
-    city: z9.string().optional(),
-    specialization: z9.string().optional(),
-    qualification: z9.string().optional(),
-    experience: z9.number().min(0, "Experience cannot be negative").optional()
+import { z as z10 } from "zod";
+var registerExpertValidationSchema = z10.object({
+  body: z10.object({
+    name: z10.string().min(2, "Name must be at least 2 characters").max(100, "Name must not exceed 100 characters"),
+    email: z10.string().email("Invalid email address").trim().toLowerCase(),
+    password: z10.string().min(6, "Password must be at least 6 characters"),
+    phone: z10.string().optional(),
+    address: z10.string().optional(),
+    city: z10.string().optional(),
+    specialization: z10.string().optional(),
+    qualification: z10.string().optional(),
+    experience: z10.number().min(0, "Experience cannot be negative").optional()
   })
 });
-var updateExpertValidationSchema = z9.object({
-  body: z9.object({
-    name: z9.string().min(2, "Name must be at least 2 characters").max(100, "Name must not exceed 100 characters").optional(),
-    email: z9.string().email("Invalid email address").trim().toLowerCase().optional(),
-    city: z9.string().optional(),
-    specialization: z9.string().optional(),
-    qualification: z9.string().optional(),
-    experience: z9.number().min(0, "Experience cannot be negative").optional()
+var updateExpertValidationSchema = z10.object({
+  body: z10.object({
+    name: z10.string().min(2, "Name must be at least 2 characters").max(100, "Name must not exceed 100 characters").optional(),
+    email: z10.string().email("Invalid email address").trim().toLowerCase().optional(),
+    city: z10.string().optional(),
+    specialization: z10.string().optional(),
+    qualification: z10.string().optional(),
+    experience: z10.number().min(0, "Experience cannot be negative").optional()
   })
 });
 var ExpertValidation = {
