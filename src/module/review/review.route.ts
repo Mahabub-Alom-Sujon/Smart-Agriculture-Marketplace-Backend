@@ -53,10 +53,10 @@ router.delete(
 // ==============================
 
 // Get all reviews
-// router.get(
-//     "/",
-//     ReviewController.getAllReviews
-// );
+router.get(
+    "/",
+    ReviewController.getAllReviews
+);
 
 // Get reviews of a specific product
 router.get(
@@ -78,8 +78,19 @@ router.get(
 // Admin delete review
 router.delete(
     "/admin/:id",
-    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    auth(Role.ADMIN),
     ReviewController.adminDeleteReview
+);
+
+// ==============================
+// Super Admin Routes
+// ==============================
+
+// Super  Admin delete review
+router.delete(
+    "/super-admin/:id",
+    auth(Role.SUPER_ADMIN),
+    ReviewController.superAdminDeleteReview
 );
 
 export const ReviewRoutes = router;

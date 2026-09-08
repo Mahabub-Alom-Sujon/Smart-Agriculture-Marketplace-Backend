@@ -29,6 +29,19 @@ const createReview = catchAsync(
 // Get All Reviews
 // ==============================
 
+const getAllReviews = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await ReviewService.getAllReviews(req.query);
+
+        sendResponse(res, {
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Reviews retrieved successfully",
+            meta: result.meta,
+            data: result.data,
+        });
+    }
+);
 
 // ==============================
 // Get Single Review
@@ -150,13 +163,32 @@ const adminDeleteReview = catchAsync(
     }
 );
 
+// ==============================
+// Admin Delete Review
+// ==============================
+const superAdminDeleteReview = catchAsync(
+    async (req: Request, res: Response) => {
+        const { id } = req.params; // রাউট প্যারামিটার থেকে রিভিউ আইডি নেওয়া
+
+        const result = await ReviewService.superAdminDeleteReview(id as string);
+
+        sendResponse(res, {
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Review deleted successfully by admin",
+            data: result,
+        });
+    }
+);
+
 export const ReviewController = {
     createReview,
-    //getAllReviews,
+    getAllReviews,
     getSingleReview,
     getMyReviews,
     getProductReviews,
     updateReview,
     deleteReview,
     adminDeleteReview,
+    superAdminDeleteReview
 };

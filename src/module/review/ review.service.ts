@@ -1,6 +1,6 @@
 import {prisma} from "../../lib/prisma";
-// import { Prisma } from "../../../generated/prisma";
 import { ICreateReview, IUpdateReview } from "./review.interface";
+import {ReviewWhereInput} from "../../../generated/prisma/models/Review";
 
 // ==============================
 // Create Review
@@ -85,95 +85,98 @@ const createReview = async (userId: string, data: ICreateReview) => {
 // ==============================
 // Get All Reviews
 // ==============================
-// const getAllReviews = async (query: Record<string, unknown>) => {
-//     const {
-//         searchTerm,
-//         productId,
-//         buyerId,
-//         orderId,
-//         rating,
-//         page = "1",
-//         limit = "10",
-//         sortBy = "createdAt",
-//         sortOrder = "desc",
-//     } = query;
-//
-//     const pageNumber = Number(page);
-//     const limitNumber = Number(limit);
-//     const skip = (pageNumber - 1) * limitNumber;
-//
-//     const andConditions: Prisma.ReviewWhereInput[] = [
-//         {
-//             isDeleted: false,
-//         },
-//     ];
-//
-//     if (searchTerm) {
-//         andConditions.push({
-//             comment: {
-//                 contains: String(searchTerm),
-//                 mode: "insensitive",
-//             },
-//         });
-//     }
-//
-//     if (productId) {
-//         andConditions.push({
-//             productId: String(productId),
-//         });
-//     }
-//
-//     if (buyerId) {
-//         andConditions.push({
-//             buyerId: String(buyerId),
-//         });
-//     }
-//
-//     if (orderId) {
-//         andConditions.push({
-//             orderId: String(orderId),
-//         });
-//     }
-//
-//     if (rating) {
-//         andConditions.push({
-//             rating: Number(rating),
-//         });
-//     }
-//
-//     const where: Prisma.ReviewWhereInput = {
-//         AND: andConditions,
-//     };
-//
-//     const [data, total] = await Promise.all([
-//         prisma.review.findMany({
-//             where,
-//             skip,
-//             take: limitNumber,
-//             orderBy: {
-//                 [String(sortBy)]: sortOrder === "asc" ? "asc" : "desc",
-//             },
-//             include: {
-//                 buyer: true,
-//                 product: true,
-//             },
-//         }),
-//
-//         prisma.review.count({
-//             where,
-//         }),
-//     ]);
-//
-//     return {
-//         meta: {
-//             page: pageNumber,
-//             limit: limitNumber,
-//             total,
-//             totalPage: Math.ceil(total / limitNumber),
-//         },
-//         data,
-//     };
-// };
+// @ts-ignore
+const getAllReviews = async (query: IQuery) => {
+
+    const limit = query.limit ? Number(query.limit) : 10;
+    const page = query.page ? Number(query.page) : 1;
+    const skip = (page - 1) * limit;
+    const sortBy = query.sortBy ? query.sortBy : "createdAt";
+    const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+    const andConditions: ReviewWhereInput[] = [];
+
+    // Searching (শুধু কমেন্টের ওপর সার্চ হবে)
+    if (query.searchTerm) {
+        andConditions.push({
+            comment: {
+                contains: query.searchTerm,
+                mode: "insensitive",
+            },
+        });
+    }
+
+    // Filtering
+    if (query.productId) {
+        andConditions.push({
+            productId: { equals: String(query.productId) },
+        });
+    }
+
+    if (query.buyerId) {
+        andConditions.push({
+            buyerId: { equals: String(query.buyerId) },
+        });
+    }
+
+    if (query.orderId) {
+        andConditions.push({
+            orderId: { equals: String(query.orderId) },
+        });
+    }
+
+    if (query.rating) {
+        andConditions.push({
+            rating: { equals: Number(query.rating) },
+        });
+    }
+
+    // সফট-ডিলিট ফিল্টার
+    andConditions.push({ isDeleted: false });
+
+    const allReviews = await prisma.review.findMany({
+        where: {
+            AND: andConditions.length > 0 ? andConditions : undefined
+        },
+
+        take: limit,
+        skip: skip,
+
+        orderBy: {
+            [sortBy]: sortOrder
+        },
+
+        include: {
+            product: true,
+            buyer: {
+                include: {
+                    user: {
+                        omit: {
+                            password: true // 👈 আপনার প্যাটার্ন অনুযায়ী পাসওয়ার্ড রিমুভ করা হয়েছে
+                        }
+                    }
+                }
+            },
+            order: true
+        }
+    });
+
+    const totalReviewCount = await prisma.review.count({
+        where: {
+            AND: andConditions
+        }
+    });
+
+    return {
+        data: allReviews,
+        meta: {
+            page: page,
+            limit: limit,
+            total: totalReviewCount,
+            totalPages: Math.ceil(totalReviewCount / limit)
+        }
+    };
+};
 
 // ==============================
 // Get Single Review
@@ -365,13 +368,37 @@ const adminDeleteReview = async (id: string) => {
     return result;
 };
 
+// ==============================
+// Super Admin Permanent Delete Review
+// ==============================
+const superAdminDeleteReview = async (id: string) => {
+    const review = await prisma.review.findUnique({
+        where: {
+            id,
+        },
+    });
+
+    if (!review) {
+        throw new Error("Review not found");
+    }
+
+    const result = await prisma.review.delete({
+        where: {
+            id,
+        },
+    });
+
+    return result;
+};
+
 export const ReviewService = {
     createReview,
-    // getAllReviews,
+    getAllReviews,
     getSingleReview,
     getMyReviews,
     getProductReviews,
     updateReview,
     deleteReview,
     adminDeleteReview,
+    superAdminDeleteReview
 };
