@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from 'helmet';
 import config from "./config";
 import { notFoundHandler } from "./middlewares/not-found";
 import { globalErrorHandler } from "./middlewares/global-error";
@@ -20,11 +21,22 @@ import {ConsultationRoutes} from "./module/consultation/consultation.route";
 
 const app: Application = express();
 
+app.use(helmet());
+
+// app.use(
+//     cors({
+//         origin: config.frontend_url,
+//         credentials: true,
+//     }),
+// );
+
 app.use(
     cors({
-        origin: config.frontend_url,
+        origin: config.frontend_url || "http://localhost:3000",
         credentials: true,
-    }),
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    })
 );
 
 app.use(

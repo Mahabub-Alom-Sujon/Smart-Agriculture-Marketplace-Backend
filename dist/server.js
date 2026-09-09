@@ -15,6 +15,7 @@ import "dotenv/config";
 import express4 from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from "helmet";
 
 // src/config/index.ts
 import dotenv from "dotenv";
@@ -5461,10 +5462,13 @@ var ConsultationRoutes = router13;
 
 // src/app.ts
 var app = express4();
+app.use(helmet());
 app.use(
   cors({
-    origin: config_default.frontend_url,
-    credentials: true
+    origin: config_default.frontend_url || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
   })
 );
 app.use(
