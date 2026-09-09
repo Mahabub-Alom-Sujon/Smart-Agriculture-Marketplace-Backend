@@ -3,7 +3,10 @@ import {
     IConsultationQuery,
     ICreateConsultation,
     IUpdateConsultation,
+    ICreateExpertAdvice,
+    IUpdateExpertAdvice,
 } from "./consultation.interface";
+import {ConsultationStatus} from "../../../generated/prisma/enums";
 
 // ==============================
 // Create Consultation
@@ -19,7 +22,7 @@ const createConsultation = async (
     });
 
     if (!farmer) {
-        throw new Error("Buyer not found");
+        throw new Error("Farmer not found");
     }
     const result = await prisma.consultation.create({
         data: {
@@ -181,7 +184,7 @@ const updateConsultation = async (
     });
 
     if (!farmer) {
-        throw new Error("Buyer not found");
+        throw new Error("Farmer not found");
     }
     const consultation =
         await prisma.consultation.findFirst({
@@ -251,13 +254,22 @@ const updateConsultationStatus = async (
 // ==============================
 const deleteConsultation = async (
     id: string,
-    farmerId: string
+    userId: string
 ) => {
+    const farmer = await prisma.farmer.findUnique({
+        where: {
+            userId: userId,
+        },
+    });
+
+    if (!farmer) {
+        throw new Error("Farmer not found");
+    }
     const consultation =
         await prisma.consultation.findFirst({
             where: {
                 id,
-                farmerId,
+                farmerId : farmer.id ,
                 isDeleted: false,
             },
         });
@@ -265,6 +277,13 @@ const deleteConsultation = async (
     if (!consultation) {
         throw new Error("Consultation not found");
     }
+    if(
+        consultation.status === ConsultationStatus.ACCEPTED ||
+        consultation.status === ConsultationStatus.COMPLETED
+    ){
+        throw new Error(`Cannot delete a consultation that has already been ${consultation.status.toLowerCase()}`)
+    }
+
 
     const result = await prisma.consultation.update({
         where: {
@@ -280,6 +299,205 @@ const deleteConsultation = async (
     return result;
 };
 
+// ==================================================
+// Create Expert Advice
+// ==================================================
+const createExpertAdvice = async (
+    consultationId: string,
+    userId: string,
+    payload: ICreateExpertAdvice
+) => {
+    const expert = await prisma.expert.findUnique({
+        where: {
+            userId: userId,
+        },
+    });
+
+    if (!expert) {
+        throw new Error("Expert Profile is not found");
+    }
+    const consultation =
+        await prisma.consultation.findFirst({
+            where: {
+                id: consultationId,
+                isDeleted: false,
+            },
+
+            include: {
+                advice: {
+                    where: {
+                        isDeleted: false,
+                    },
+                },
+            },
+        });
+
+    if (!consultation) {
+        throw new Error("Consultation not found");
+    }
+
+    // Because consultationId is @unique
+    if (consultation.advice) {
+        throw new Error(
+            "Advice already exists for this consultation"
+        );
+    }
+
+    const result = await prisma.expertAdvice.create({
+        data: {
+            consultationId,
+            expertId : expert.id,
+            diagnosis: payload.diagnosis,
+            recommendation: payload.recommendation,
+            fertilizer: payload.fertilizer,
+            pesticide: payload.pesticide,
+        },
+
+        include: {
+            expert: true,
+            consultation: true,
+        },
+    });
+
+    // Automatically mark consultation as answered
+    await prisma.consultation.update({
+        where: {
+            id: consultationId,
+        },
+
+        data: {
+            status: "COMPLETED",
+        },
+    });
+
+    return result;
+};
+
+// ==================================================
+// Get Advice By Consultation
+// ==================================================
+const getConsultationAdvice = async (
+    consultationId: string
+) => {
+    const result = await prisma.expertAdvice.findFirst({
+        where: {
+            consultationId,
+            isDeleted: false,
+        },
+
+        include: {
+            expert: true,
+            consultation: true,
+        },
+    });
+
+    if (!result) {
+        throw new Error("Expert advice not found");
+    }
+
+    return result;
+};
+
+// ==================================================
+// Update Expert Advice
+// ==================================================
+const updateExpertAdvice = async (
+    consultationId: string,
+    userId: string,
+    payload: IUpdateExpertAdvice
+) => {
+    const expert = await prisma.expert.findUnique({
+        where: {
+            userId: userId,
+        },
+    });
+
+    if (!expert) {
+        throw new Error("Expert Profile is not found");
+    }
+    const advice =
+        await prisma.expertAdvice.findFirst({
+            where: {
+                consultationId,
+                expertId : expert.id,
+                isDeleted: false,
+            },
+        });
+
+    if (!advice) {
+        throw new Error("Expert advice not found");
+    }
+
+    const result = await prisma.expertAdvice.update({
+        where: {
+            id: advice.id,
+        },
+
+        data: payload,
+
+        include: {
+            expert: true,
+            consultation: true,
+        },
+    });
+
+    return result;
+};
+
+// ==================================================
+// Delete Expert Advice
+// ==================================================
+const deleteExpertAdvice = async (
+    consultationId: string,
+    userId: string
+) => {
+    const expert = await prisma.expert.findUnique({
+        where: {
+            userId: userId,
+        },
+    });
+
+    if (!expert) {
+        throw new Error("Expert Profile is not found");
+    }
+    const advice =
+        await prisma.expertAdvice.findFirst({
+            where: {
+                consultationId,
+                expertId:expert.id,
+                isDeleted: false,
+            },
+        });
+
+    if (!advice) {
+        throw new Error("Expert advice not found");
+    }
+
+    const result = await prisma.expertAdvice.update({
+        where: {
+            id: advice.id,
+        },
+
+        data: {
+            isDeleted: true,
+            deletedAt: new Date(),
+        },
+    });
+
+    // Consultation goes back to pending/review state
+    await prisma.consultation.update({
+        where: {
+            id: consultationId,
+        },
+
+        data: {
+            status: "CANCELLED",
+        },
+    });
+
+    return result;
+};
+
 export const ConsultationService = {
     createConsultation,
     getAllConsultations,
@@ -287,4 +505,9 @@ export const ConsultationService = {
     updateConsultation,
     deleteConsultation,
     updateConsultationStatus,
+
+    createExpertAdvice,
+    getConsultationAdvice,
+    updateExpertAdvice,
+    deleteExpertAdvice,
 };

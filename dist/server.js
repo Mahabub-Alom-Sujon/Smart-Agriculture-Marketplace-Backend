@@ -461,6 +461,12 @@ var OrderStatus = {
   REFUNDED: "REFUNDED",
   CONFIRMED: "CONFIRMED"
 };
+var ConsultationStatus = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED"
+};
 var PaymentStatus = {
   PENDING: "PENDING",
   PAID: "PAID",
@@ -4813,7 +4819,7 @@ var createConsultation = async (userId, payload) => {
     }
   });
   if (!farmer) {
-    throw new Error("Buyer not found");
+    throw new Error("Farmer not found");
   }
   const result = await prisma.consultation.create({
     data: {
@@ -4934,7 +4940,7 @@ var updateConsultation = async (id, userId, payload) => {
     }
   });
   if (!farmer) {
-    throw new Error("Buyer not found");
+    throw new Error("Farmer not found");
   }
   const consultation = await prisma.consultation.findFirst({
     where: {
@@ -4979,16 +4985,27 @@ var updateConsultationStatus = async (id, status) => {
   });
   return result;
 };
-var deleteConsultation = async (id, farmerId) => {
+var deleteConsultation = async (id, userId) => {
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId
+    }
+  });
+  if (!farmer) {
+    throw new Error("Farmer not found");
+  }
   const consultation = await prisma.consultation.findFirst({
     where: {
       id,
-      farmerId,
+      farmerId: farmer.id,
       isDeleted: false
     }
   });
   if (!consultation) {
     throw new Error("Consultation not found");
+  }
+  if (consultation.status === ConsultationStatus.ACCEPTED || consultation.status === ConsultationStatus.COMPLETED) {
+    throw new Error(`Cannot delete a consultation that has already been ${consultation.status.toLowerCase()}`);
   }
   const result = await prisma.consultation.update({
     where: {
@@ -5001,13 +5018,156 @@ var deleteConsultation = async (id, farmerId) => {
   });
   return result;
 };
+var createExpertAdvice = async (consultationId, userId, payload) => {
+  const expert = await prisma.expert.findUnique({
+    where: {
+      userId
+    }
+  });
+  if (!expert) {
+    throw new Error("Expert Profile is not found");
+  }
+  const consultation = await prisma.consultation.findFirst({
+    where: {
+      id: consultationId,
+      isDeleted: false
+    },
+    include: {
+      advice: {
+        where: {
+          isDeleted: false
+        }
+      }
+    }
+  });
+  if (!consultation) {
+    throw new Error("Consultation not found");
+  }
+  if (consultation.advice) {
+    throw new Error(
+      "Advice already exists for this consultation"
+    );
+  }
+  const result = await prisma.expertAdvice.create({
+    data: {
+      consultationId,
+      expertId: expert.id,
+      diagnosis: payload.diagnosis,
+      recommendation: payload.recommendation,
+      fertilizer: payload.fertilizer,
+      pesticide: payload.pesticide
+    },
+    include: {
+      expert: true,
+      consultation: true
+    }
+  });
+  await prisma.consultation.update({
+    where: {
+      id: consultationId
+    },
+    data: {
+      status: "COMPLETED"
+    }
+  });
+  return result;
+};
+var getConsultationAdvice = async (consultationId) => {
+  const result = await prisma.expertAdvice.findFirst({
+    where: {
+      consultationId,
+      isDeleted: false
+    },
+    include: {
+      expert: true,
+      consultation: true
+    }
+  });
+  if (!result) {
+    throw new Error("Expert advice not found");
+  }
+  return result;
+};
+var updateExpertAdvice = async (consultationId, userId, payload) => {
+  const expert = await prisma.expert.findUnique({
+    where: {
+      userId
+    }
+  });
+  if (!expert) {
+    throw new Error("Expert Profile is not found");
+  }
+  const advice = await prisma.expertAdvice.findFirst({
+    where: {
+      consultationId,
+      expertId: expert.id,
+      isDeleted: false
+    }
+  });
+  if (!advice) {
+    throw new Error("Expert advice not found");
+  }
+  const result = await prisma.expertAdvice.update({
+    where: {
+      id: advice.id
+    },
+    data: payload,
+    include: {
+      expert: true,
+      consultation: true
+    }
+  });
+  return result;
+};
+var deleteExpertAdvice = async (consultationId, userId) => {
+  const expert = await prisma.expert.findUnique({
+    where: {
+      userId
+    }
+  });
+  if (!expert) {
+    throw new Error("Expert Profile is not found");
+  }
+  const advice = await prisma.expertAdvice.findFirst({
+    where: {
+      consultationId,
+      expertId: expert.id,
+      isDeleted: false
+    }
+  });
+  if (!advice) {
+    throw new Error("Expert advice not found");
+  }
+  const result = await prisma.expertAdvice.update({
+    where: {
+      id: advice.id
+    },
+    data: {
+      isDeleted: true,
+      deletedAt: /* @__PURE__ */ new Date()
+    }
+  });
+  await prisma.consultation.update({
+    where: {
+      id: consultationId
+    },
+    data: {
+      status: "CANCELLED"
+    }
+  });
+  return result;
+};
 var ConsultationService = {
   createConsultation,
   getAllConsultations,
   getSingleConsultation,
   updateConsultation,
   deleteConsultation,
-  updateConsultationStatus
+  updateConsultationStatus,
+  createExpertAdvice,
+  getConsultationAdvice,
+  updateExpertAdvice,
+  deleteExpertAdvice
 };
 
 // src/module/consultation/consultation.controller.ts
@@ -5103,13 +5263,81 @@ var deleteConsultation2 = catchAsync(
     });
   }
 );
+var createExpertAdvice2 = catchAsync(
+  async (req, res) => {
+    const { id: consultationId } = req.params;
+    const user = req.user;
+    const result = await ConsultationService.createExpertAdvice(
+      consultationId,
+      user.userId,
+      req.body
+    );
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Expert advice created successfully",
+      data: result
+    });
+  }
+);
+var getConsultationAdvice2 = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const result = await ConsultationService.getConsultationAdvice(
+      id
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Expert advice retrieved successfully",
+      data: result
+    });
+  }
+);
+var updateExpertAdvice2 = catchAsync(
+  async (req, res) => {
+    const { id: consultationId } = req.params;
+    const user = req.user;
+    const result = await ConsultationService.updateExpertAdvice(
+      consultationId,
+      user.userId,
+      req.body
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Expert advice updated successfully",
+      data: result
+    });
+  }
+);
+var deleteExpertAdvice2 = catchAsync(
+  async (req, res) => {
+    const { id: consultationId } = req.params;
+    const user = req.user;
+    const result = await ConsultationService.deleteExpertAdvice(
+      consultationId,
+      user.userId
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Expert advice deleted successfully",
+      data: result
+    });
+  }
+);
 var ConsultationController = {
   createConsultation: createConsultation2,
   getAllConsultations: getAllConsultations2,
   getSingleConsultation: getSingleConsultation2,
   updateConsultation: updateConsultation2,
   deleteConsultation: deleteConsultation2,
-  updateConsultationStatus: updateConsultationStatus2
+  updateConsultationStatus: updateConsultationStatus2,
+  createExpertAdvice: createExpertAdvice2,
+  getConsultationAdvice: getConsultationAdvice2,
+  updateExpertAdvice: updateExpertAdvice2,
+  deleteExpertAdvice: deleteExpertAdvice2
 };
 
 // src/module/consultation/consultation.validation.ts
@@ -5132,16 +5360,34 @@ var updateConsultationStatusValidationSchema = z11.object({
   body: z11.object({
     status: z11.enum([
       "PENDING",
-      "IN_REVIEW",
-      "ANSWERED",
-      "CLOSED"
+      "ACCEPTED",
+      "COMPLETED",
+      "CANCELLED"
     ])
+  })
+});
+var createExpertAdviceValidationSchema = z11.object({
+  body: z11.object({
+    diagnosis: z11.string().min(5, "Diagnosis must be at least 5 characters"),
+    recommendation: z11.string().min(5, "Recommendation must be at least 5 characters"),
+    fertilizer: z11.string().optional(),
+    pesticide: z11.string().optional()
+  })
+});
+var updateExpertAdviceValidationSchema = z11.object({
+  body: z11.object({
+    diagnosis: z11.string().min(5, "Diagnosis must be at least 5 characters").optional(),
+    recommendation: z11.string().min(5, "Recommendation must be at least 5 characters").optional(),
+    fertilizer: z11.string().optional(),
+    pesticide: z11.string().optional()
   })
 });
 var ConsultationValidation = {
   createConsultationValidationSchema,
   updateConsultationValidationSchema,
-  updateConsultationStatusValidationSchema
+  updateConsultationStatusValidationSchema,
+  createExpertAdviceValidationSchema,
+  updateExpertAdviceValidationSchema
 };
 
 // src/module/consultation/consultation.route.ts
@@ -5184,6 +5430,32 @@ router13.patch(
     ConsultationValidation.updateConsultationStatusValidationSchema
   ),
   ConsultationController.updateConsultationStatus
+);
+router13.post(
+  "/:id/advice",
+  auth(Role.EXPERT),
+  validateRequest(
+    ConsultationValidation.createExpertAdviceValidationSchema
+  ),
+  ConsultationController.createExpertAdvice
+);
+router13.get(
+  "/:id/advice",
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.EXPERT, Role.FARMER),
+  ConsultationController.getConsultationAdvice
+);
+router13.patch(
+  "/:id/advice",
+  auth(Role.EXPERT),
+  validateRequest(
+    ConsultationValidation.updateExpertAdviceValidationSchema
+  ),
+  ConsultationController.updateExpertAdvice
+);
+router13.delete(
+  "/:id/advice",
+  auth(Role.EXPERT),
+  ConsultationController.deleteExpertAdvice
 );
 var ConsultationRoutes = router13;
 

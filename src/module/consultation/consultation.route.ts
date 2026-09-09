@@ -68,4 +68,46 @@ router.patch(
     ConsultationController.updateConsultationStatus
 );
 
+// ==================================================
+// Expert Advice APIs
+// ==================================================
+
+// Create advice
+router.post(
+    "/:id/advice",
+    auth(Role.EXPERT),
+    validateRequest(
+        ConsultationValidation.createExpertAdviceValidationSchema
+    ),
+    ConsultationController.createExpertAdvice
+);
+
+
+// Get advice
+router.get(
+    "/:id/advice",
+    auth(Role.SUPER_ADMIN, Role.ADMIN, Role.EXPERT ,Role.FARMER),
+    ConsultationController.getConsultationAdvice
+);
+
+
+// Update advice
+router.patch(
+    "/:id/advice",
+    auth(Role.EXPERT),
+    validateRequest(
+        ConsultationValidation.updateExpertAdviceValidationSchema
+    ),
+    ConsultationController.updateExpertAdvice
+);
+
+
+// Delete advice
+router.delete(
+    "/:id/advice",
+    auth(Role.EXPERT,),
+    ConsultationController.deleteExpertAdvice
+);
+
+
 export const ConsultationRoutes = router;

@@ -138,6 +138,98 @@ const deleteConsultation = catchAsync(
     }
 );
 
+// ==================================================
+// Create Expert Advice
+// ==================================================
+const createExpertAdvice = catchAsync(
+    async (req: Request, res: Response) => {
+        const { id: consultationId } = req.params;
+        const user = req.user as IRequestUser;
+
+        const result =
+            await ConsultationService.createExpertAdvice(
+                consultationId as string,
+                user.userId,
+                req.body
+            );
+
+        sendResponse(res, {
+            statusCode: 201,
+            success: true,
+            message: "Expert advice created successfully",
+            data: result,
+        });
+    }
+);
+
+// ==================================================
+// Get Consultation Advice
+// ==================================================
+const getConsultationAdvice = catchAsync(
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+
+        const result =
+            await ConsultationService.getConsultationAdvice(
+                id as string
+            );
+
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Expert advice retrieved successfully",
+            data: result,
+        });
+    }
+);
+
+// ==================================================
+// Update Expert Advice
+// ==================================================
+const updateExpertAdvice = catchAsync(
+    async (req: Request, res: Response) => {
+        const { id: consultationId } = req.params;
+        const user = req.user as IRequestUser;
+
+        const result =
+            await ConsultationService.updateExpertAdvice(
+                consultationId as string,
+                user.userId,
+                req.body
+            );
+
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Expert advice updated successfully",
+            data: result,
+        });
+    }
+);
+
+// ==================================================
+// Delete Expert Advice
+// ==================================================
+const deleteExpertAdvice = catchAsync(
+    async (req: Request, res: Response) => {
+        const { id: consultationId } = req.params;
+        const user = req.user as IRequestUser;
+
+        const result =
+            await ConsultationService.deleteExpertAdvice(
+                consultationId as string,
+                user.userId,
+            );
+
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Expert advice deleted successfully",
+            data: result,
+        });
+    }
+);
+
 export const ConsultationController = {
     createConsultation,
     getAllConsultations,
@@ -145,4 +237,9 @@ export const ConsultationController = {
     updateConsultation,
     deleteConsultation,
     updateConsultationStatus,
+
+    createExpertAdvice,
+    getConsultationAdvice,
+    updateExpertAdvice,
+    deleteExpertAdvice,
 };

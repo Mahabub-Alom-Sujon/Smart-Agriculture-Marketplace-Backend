@@ -20,3 +20,17 @@ export interface IUpdateConsultation {
     problem?: string;
     image?: string;
 }
+
+export interface ICreateExpertAdvice {
+    diagnosis: string;
+    recommendation: string;
+    fertilizer?: string;
+    pesticide?: string;
+}
+
+export interface IUpdateExpertAdvice {
+    diagnosis?: string;
+    recommendation?: string;
+    fertilizer?: string;
+    pesticide?: string;
+}
