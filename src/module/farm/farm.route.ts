@@ -1,5 +1,5 @@
 import { Router } from "express";
-
+import { Role } from "../../../generated/prisma/enums";
 import { FarmController } from "./farm.controller";
 
 import {
@@ -37,21 +37,21 @@ router.get(
 
 router.post(
     "/",
-    auth("FARMER"),
+    auth(Role.FARMER),
     validateRequest(createFarmValidation),
     FarmController.createFarm,
 );
 
 router.patch(
     "/:id",
-    auth("FARMER"),
+    auth(Role.FARMER),
     validateRequest(updateFarmValidation),
     FarmController.updateFarm,
 );
 
 router.delete(
     "/:id",
-    auth("FARMER"),
+    auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
     FarmController.deleteFarm,
 );
 

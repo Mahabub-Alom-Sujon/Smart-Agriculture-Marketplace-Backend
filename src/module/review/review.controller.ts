@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import httpStatus from 'http-status'
 import { catchAsync } from '../../utils/catch-async'
 import { sendResponse } from '../../utils/send-response'
-import { ReviewService } from "./ review.service";
+import { ReviewService } from "./review.service";
 import {IRequestUser} from "../auth/auth.interface";
 
 // ==============================

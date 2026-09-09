@@ -13,9 +13,10 @@ import {CropRoutes} from "./module/crop/crop.route";
 import {OrderRoutes} from "./module/order/order.route";
 import {PaymentRoutes} from "./module/payment/payment.route";
 import {UserRoutes} from "./module/user/user.route";
-import {AuditLogRoutes} from "./module/auditLog/ auditLog.route";
+import {AuditLogRoutes} from "./module/auditLog/auditLog.route";
 import { ReviewRoutes } from "./module/review/review.route";
 import {ExpertRoutes} from "./module/expert/expert.route";
+import {ConsultationRoutes} from "./module/consultation/consultation.route";
 
 const app: Application = express();
 
@@ -41,6 +42,7 @@ app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/audit-logs", AuditLogRoutes);
 app.use("/api/v1/farms", FarmRoutes);
 app.use("/api/v1/crops", CropRoutes);
+app.use("/api/v1/consultations", ConsultationRoutes);
 app.use("/api/v1/orders", OrderRoutes);
 app.use("/api/v1/payments", PaymentRoutes);
 app.use("/api/v1/categories", CategoryRoutes);

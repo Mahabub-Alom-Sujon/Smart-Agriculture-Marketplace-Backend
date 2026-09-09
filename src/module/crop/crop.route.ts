@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { CropController } from "./crop.controller";
 import { auth } from "../../middlewares/checkAuth";
+import { Role } from "../../../generated/prisma/enums";
 import { validateRequest } from "../../middlewares/validateRequest";
 
 import {
@@ -40,28 +41,28 @@ router.get(
 
 router.post(
     "/",
-    auth("FARMER"),
+    auth(Role.FARMER),
     validateRequest(createCropValidation),
     CropController.createCrop
 );
 
 router.patch(
     "/:id",
-    auth("FARMER"),
+    auth(Role.FARMER),
     validateRequest(updateCropValidation),
     CropController.updateCrop
 );
 
 router.patch(
     "/:id/status",
-    auth("FARMER"),
+    auth(Role.FARMER),
     validateRequest(updateCropStatusValidation),
     CropController.updateCropStatus
 );
 
 router.delete(
     "/:id",
-    auth("FARMER"),
+    auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
     // validateRequest(cropIdValidation),
     CropController.deleteCrop
 );

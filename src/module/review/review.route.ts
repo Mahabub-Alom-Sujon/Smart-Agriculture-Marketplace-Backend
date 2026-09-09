@@ -1,6 +1,6 @@
 import express from "express";
 import { ReviewController } from "./review.controller";
-import { ReviewValidation } from "./ review.validation";
+import { ReviewValidation } from "./review.validation";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middlewares/checkAuth";
 import {validateRequest} from "../../middlewares/validateRequest";

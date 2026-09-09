@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import httpStatus from 'http-status'
 import { catchAsync } from '../../utils/catch-async'
 import { sendResponse } from '../../utils/send-response'
-import { adminService } from "./ admin.service";
+import { adminService } from "./admin.service";
 
 const getDashboardStats = catchAsync(
     async (req: Request, res: Response) => {

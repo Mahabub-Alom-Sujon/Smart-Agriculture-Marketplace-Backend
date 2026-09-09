@@ -37,7 +37,7 @@ router.get(
 
 router.patch(
     "/:id/status",
-    auth(Role.FARMER, Role.ADMIN),
+    auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
     // validateRequest(OrderValidation.updateOrderStatusValidation),
     orderController.updateOrderStatus
 );

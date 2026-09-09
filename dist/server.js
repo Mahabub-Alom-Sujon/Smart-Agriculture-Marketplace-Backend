@@ -12,7 +12,7 @@ var __export = (target, all) => {
 import "dotenv/config";
 
 // src/app.ts
-import express3 from "express";
+import express4 from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -1930,10 +1930,10 @@ var ProductRoutes = router3;
 // src/module/admin/admin.route.ts
 import { Router as Router4 } from "express";
 
-// src/module/admin/ admin.controller.ts
+// src/module/admin/admin.controller.ts
 import httpStatus6 from "http-status";
 
-// src/module/admin/ admin.service.ts
+// src/module/admin/admin.service.ts
 var getDashboardStats = async () => {
   const [
     totalUsers,
@@ -2122,7 +2122,7 @@ var adminService = {
   deleteUser
 };
 
-// src/module/admin/ admin.controller.ts
+// src/module/admin/admin.controller.ts
 var getDashboardStats2 = catchAsync(
   async (req, res) => {
     const result = await adminService.getDashboardStats();
@@ -2577,19 +2577,19 @@ router5.get(
 );
 router5.post(
   "/",
-  auth("FARMER"),
+  auth(Role.FARMER),
   validateRequest(createFarmValidation),
   FarmController.createFarm
 );
 router5.patch(
   "/:id",
-  auth("FARMER"),
+  auth(Role.FARMER),
   validateRequest(updateFarmValidation),
   FarmController.updateFarm
 );
 router5.delete(
   "/:id",
-  auth("FARMER"),
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
   FarmController.deleteFarm
 );
 var FarmRoutes = router5;
@@ -2994,25 +2994,25 @@ router6.get(
 );
 router6.post(
   "/",
-  auth("FARMER"),
+  auth(Role.FARMER),
   validateRequest(createCropValidation),
   CropController.createCrop
 );
 router6.patch(
   "/:id",
-  auth("FARMER"),
+  auth(Role.FARMER),
   validateRequest(updateCropValidation),
   CropController.updateCrop
 );
 router6.patch(
   "/:id/status",
-  auth("FARMER"),
+  auth(Role.FARMER),
   validateRequest(updateCropStatusValidation),
   CropController.updateCropStatus
 );
 router6.delete(
   "/:id",
-  auth("FARMER"),
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
   // validateRequest(cropIdValidation),
   CropController.deleteCrop
 );
@@ -3264,7 +3264,7 @@ router7.get(
 );
 router7.patch(
   "/:id/status",
-  auth(Role.FARMER, Role.ADMIN),
+  auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
   // validateRequest(OrderValidation.updateOrderStatusValidation),
   orderController.updateOrderStatus
 );
@@ -3739,7 +3739,7 @@ router9.patch(
 );
 var UserRoutes = router9;
 
-// src/module/auditLog/ auditLog.route.ts
+// src/module/auditLog/auditLog.route.ts
 import { Router as Router10 } from "express";
 
 // src/module/auditLog/auditLog.service.ts
@@ -3834,7 +3834,7 @@ var AuditLogService = {
   getAuditLogById
 };
 
-// src/module/auditLog/ auditLog.controller.ts
+// src/module/auditLog/auditLog.controller.ts
 var getAllAuditLogs2 = async (req, res) => {
   const result = await AuditLogService.getAllAuditLogs(
     req.query
@@ -3861,7 +3861,7 @@ var AuditLogController = {
   getAuditLogById: getAuditLogById2
 };
 
-// src/module/auditLog/ auditLog.route.ts
+// src/module/auditLog/auditLog.route.ts
 var router10 = Router10();
 router10.get(
   "/",
@@ -3881,7 +3881,7 @@ import express2 from "express";
 // src/module/review/review.controller.ts
 import httpStatus9 from "http-status";
 
-// src/module/review/ review.service.ts
+// src/module/review/review.service.ts
 var createReview = async (userId, data) => {
   const { productId, orderId, rating, comment } = data;
   const buyer = await prisma.buyer.findUnique({
@@ -4325,7 +4325,7 @@ var ReviewController = {
   superAdminDeleteReview: superAdminDeleteReview2
 };
 
-// src/module/review/ review.validation.ts
+// src/module/review/review.validation.ts
 import { z as z9 } from "zod";
 var createReviewValidationSchema = z9.object({
   body: z9.object({
@@ -4802,8 +4802,393 @@ router12.delete(
 );
 var ExpertRoutes = router12;
 
+// src/module/consultation/consultation.route.ts
+import express3 from "express";
+
+// src/module/consultation/consultation.service.ts
+var createConsultation = async (userId, payload) => {
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId
+    }
+  });
+  if (!farmer) {
+    throw new Error("Buyer not found");
+  }
+  const result = await prisma.consultation.create({
+    data: {
+      farmerId: farmer.id,
+      cropName: payload.cropName,
+      problem: payload.problem,
+      image: payload.image
+    }
+  });
+  return result;
+};
+var getAllConsultations = async (query) => {
+  const {
+    searchTerm,
+    cropName,
+    status,
+    farmerId,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const where = {
+    isDeleted: false,
+    ...status && {
+      status
+    },
+    ...farmerId && {
+      farmerId
+    },
+    ...cropName && {
+      cropName: {
+        contains: cropName,
+        mode: "insensitive"
+      }
+    },
+    ...searchTerm && {
+      OR: [
+        {
+          cropName: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          problem: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        }
+      ]
+    }
+  };
+  const [result, total] = await Promise.all([
+    prisma.consultation.findMany({
+      where,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder
+      },
+      include: {
+        farmer: true,
+        advice: {
+          where: {
+            isDeleted: false
+          },
+          include: {
+            expert: true
+          }
+        }
+      }
+    }),
+    prisma.consultation.count({
+      where
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
+};
+var getSingleConsultation = async (id) => {
+  const result = await prisma.consultation.findFirst({
+    where: {
+      id,
+      isDeleted: false
+    },
+    include: {
+      farmer: true,
+      advice: {
+        where: {
+          isDeleted: false
+        },
+        include: {
+          expert: true
+        }
+      }
+    }
+  });
+  if (!result) {
+    throw new Error("Consultation not found");
+  }
+  return result;
+};
+var updateConsultation = async (id, userId, payload) => {
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId
+    }
+  });
+  if (!farmer) {
+    throw new Error("Buyer not found");
+  }
+  const consultation = await prisma.consultation.findFirst({
+    where: {
+      id,
+      farmerId: farmer.id,
+      isDeleted: false
+    }
+  });
+  if (!consultation) {
+    throw new Error("Consultation not found");
+  }
+  if (consultation.status !== "PENDING") {
+    throw new Error(
+      "Consultation cannot be updated after review has started"
+    );
+  }
+  const result = await prisma.consultation.update({
+    where: {
+      id
+    },
+    data: payload
+  });
+  return result;
+};
+var updateConsultationStatus = async (id, status) => {
+  const consultation = await prisma.consultation.findFirst({
+    where: {
+      id,
+      isDeleted: false
+    }
+  });
+  if (!consultation) {
+    throw new Error("Consultation not found");
+  }
+  const result = await prisma.consultation.update({
+    where: {
+      id
+    },
+    data: {
+      status
+    }
+  });
+  return result;
+};
+var deleteConsultation = async (id, farmerId) => {
+  const consultation = await prisma.consultation.findFirst({
+    where: {
+      id,
+      farmerId,
+      isDeleted: false
+    }
+  });
+  if (!consultation) {
+    throw new Error("Consultation not found");
+  }
+  const result = await prisma.consultation.update({
+    where: {
+      id
+    },
+    data: {
+      isDeleted: true,
+      deletedAt: /* @__PURE__ */ new Date()
+    }
+  });
+  return result;
+};
+var ConsultationService = {
+  createConsultation,
+  getAllConsultations,
+  getSingleConsultation,
+  updateConsultation,
+  deleteConsultation,
+  updateConsultationStatus
+};
+
+// src/module/consultation/consultation.controller.ts
+var createConsultation2 = catchAsync(
+  async (req, res) => {
+    const user = req.user;
+    const result = await ConsultationService.createConsultation(
+      user.userId,
+      req.body
+    );
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Consultation created successfully",
+      data: result
+    });
+  }
+);
+var getAllConsultations2 = catchAsync(
+  async (req, res) => {
+    const result = await ConsultationService.getAllConsultations(
+      req.query
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Consultations retrieved successfully",
+      meta: result.meta,
+      data: result.data
+    });
+  }
+);
+var getSingleConsultation2 = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const result = await ConsultationService.getSingleConsultation(
+      id
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Consultation retrieved successfully",
+      data: result
+    });
+  }
+);
+var updateConsultation2 = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const user = req.user;
+    const result = await ConsultationService.updateConsultation(
+      id,
+      user.userId,
+      req.body
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Consultation updated successfully",
+      data: result
+    });
+  }
+);
+var updateConsultationStatus2 = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    const result = await ConsultationService.updateConsultationStatus(
+      id,
+      status
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Consultation status updated successfully",
+      data: result
+    });
+  }
+);
+var deleteConsultation2 = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const user = req.user;
+    const result = await ConsultationService.deleteConsultation(
+      id,
+      user.userId
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Consultation deleted successfully",
+      data: result
+    });
+  }
+);
+var ConsultationController = {
+  createConsultation: createConsultation2,
+  getAllConsultations: getAllConsultations2,
+  getSingleConsultation: getSingleConsultation2,
+  updateConsultation: updateConsultation2,
+  deleteConsultation: deleteConsultation2,
+  updateConsultationStatus: updateConsultationStatus2
+};
+
+// src/module/consultation/consultation.validation.ts
+import { z as z11 } from "zod";
+var createConsultationValidationSchema = z11.object({
+  body: z11.object({
+    cropName: z11.string().min(2, "Crop name must be at least 2 characters").optional(),
+    problem: z11.string().min(5, "Problem must be at least 5 characters"),
+    image: z11.string().url("Invalid image URL").optional()
+  })
+});
+var updateConsultationValidationSchema = z11.object({
+  body: z11.object({
+    cropName: z11.string().min(2, "Crop name must be at least 2 characters").optional(),
+    problem: z11.string().min(5, "Problem must be at least 5 characters").optional(),
+    image: z11.string().url("Invalid image URL").optional()
+  })
+});
+var updateConsultationStatusValidationSchema = z11.object({
+  body: z11.object({
+    status: z11.enum([
+      "PENDING",
+      "IN_REVIEW",
+      "ANSWERED",
+      "CLOSED"
+    ])
+  })
+});
+var ConsultationValidation = {
+  createConsultationValidationSchema,
+  updateConsultationValidationSchema,
+  updateConsultationStatusValidationSchema
+};
+
+// src/module/consultation/consultation.route.ts
+var router13 = express3.Router();
+router13.post(
+  "/",
+  auth(Role.FARMER),
+  validateRequest(
+    ConsultationValidation.createConsultationValidationSchema
+  ),
+  ConsultationController.createConsultation
+);
+router13.get(
+  "/",
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.EXPERT, Role.FARMER),
+  ConsultationController.getAllConsultations
+);
+router13.get(
+  "/:id",
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.EXPERT, Role.FARMER),
+  ConsultationController.getSingleConsultation
+);
+router13.patch(
+  "/:id",
+  auth(Role.FARMER),
+  validateRequest(
+    ConsultationValidation.updateConsultationValidationSchema
+  ),
+  ConsultationController.updateConsultation
+);
+router13.delete(
+  "/:id",
+  auth(Role.FARMER),
+  ConsultationController.deleteConsultation
+);
+router13.patch(
+  "/:id/status",
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.EXPERT),
+  validateRequest(
+    ConsultationValidation.updateConsultationStatusValidationSchema
+  ),
+  ConsultationController.updateConsultationStatus
+);
+var ConsultationRoutes = router13;
+
 // src/app.ts
-var app = express3();
+var app = express4();
 app.use(
   cors({
     origin: config_default.frontend_url,
@@ -4812,10 +5197,10 @@ app.use(
 );
 app.use(
   "/api/v1/payments/webhook",
-  express3.raw({ type: "application/json" })
+  express4.raw({ type: "application/json" })
 );
-app.use(express3.json());
-app.use(express3.urlencoded({ extended: true }));
+app.use(express4.json());
+app.use(express4.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
@@ -4824,6 +5209,7 @@ app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/audit-logs", AuditLogRoutes);
 app.use("/api/v1/farms", FarmRoutes);
 app.use("/api/v1/crops", CropRoutes);
+app.use("/api/v1/consultations", ConsultationRoutes);
 app.use("/api/v1/orders", OrderRoutes);
 app.use("/api/v1/payments", PaymentRoutes);
 app.use("/api/v1/categories", CategoryRoutes);
