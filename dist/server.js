@@ -1133,7 +1133,8 @@ var ManualRegistrationZodSchema = z.object({
 var LoginZodSchema = z.object({
   body: z.object({
     email: z.string().trim().toLowerCase().email("Invalid email format"),
-    password: z.string().min(1, "Password is required")
+    password: z.string().min(1, "Password is required"),
+    remember: z.boolean().default(false)
   })
 });
 var GoogleLoginZodSchema = z.object({
@@ -1443,13 +1444,14 @@ var createProduct = async (payload) => {
 var getAllProducts = async (query) => {
   const {
     searchTerm,
-    categoryId,
-    farmerId,
+    category,
+    farmer,
+    rating,
     status,
     minPrice,
     maxPrice,
     page = "1",
-    limit = "10",
+    limit = "9",
     sortBy = "createdAt",
     sortOrder = "desc"
   } = query;
@@ -1472,17 +1474,55 @@ var getAllProducts = async (query) => {
           contains: searchTerm,
           mode: "insensitive"
         }
+      },
+      {
+        category: {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        }
+      },
+      {
+        farmer: {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        }
       }
     ];
   }
-  if (categoryId) {
-    where.categoryId = categoryId;
+  if (category) {
+    where.category = {
+      name: {
+        contains: category,
+        mode: "insensitive"
+      }
+    };
   }
-  if (farmerId) {
-    where.farmerId = farmerId;
+  if (farmer) {
+    where.farmer = {
+      name: {
+        contains: farmer,
+        mode: "insensitive"
+      }
+    };
   }
   if (status) {
     where.status = status;
+  }
+  if (rating) {
+    const ratingNumber = Number(rating);
+    if (!Number.isNaN(ratingNumber)) {
+      where.reviews = {
+        some: {
+          rating: {
+            gte: ratingNumber
+          }
+        }
+      };
+    }
   }
   if (minPrice || maxPrice) {
     where.price = {};

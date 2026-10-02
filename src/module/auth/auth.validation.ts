@@ -75,6 +75,8 @@ const LoginZodSchema = z.object({
         password: z
             .string()
             .min(1, "Password is required"),
+        remember: z.boolean().default(false),
+
     }),
 });
 

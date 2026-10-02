@@ -5,7 +5,6 @@ import { ProductStatus } from '../../../generated/prisma/enums';
 
 const createProduct = async (payload: CreateProduct) => {
     const { categoryId, farmerId } = payload;
-
     // Check category
     const category = await prisma.category.findUnique({
         where: {
@@ -13,25 +12,20 @@ const createProduct = async (payload: CreateProduct) => {
             isDeleted: false,
         },
     });
-
     if (!category) {
         throw new Error( 'Category not found');
     }
-
     // Check farmer
     const farmer = await prisma.farmer.findUnique({
         where: {
             id: farmerId,
         },
     });
-
     if (!farmer) {
         throw new Error ('Farmer not found');
     }
-
     const result = await prisma.product.create({
         data: payload,
-
         include: {
             category:{
                 select:{
@@ -47,20 +41,20 @@ const createProduct = async (payload: CreateProduct) => {
             }
         },
     });
-
     return result;
 };
 
 const getAllProducts = async (query:IProductQuery)=>{
     const {
         searchTerm,
-        categoryId,
-        farmerId,
+        category,
+        farmer,
+        rating,
         status,
         minPrice,
         maxPrice,
         page = '1',
-        limit = '10',
+        limit = '9',
         sortBy = 'createdAt',
         sortOrder = 'desc',
     } = query;
@@ -68,11 +62,9 @@ const getAllProducts = async (query:IProductQuery)=>{
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
     const skip = (pageNumber - 1) * limitNumber;
-
     const where: any = {
         isDeleted: false,
     };
-
     // Search
     if (searchTerm) {
         where.OR = [
@@ -88,17 +80,44 @@ const getAllProducts = async (query:IProductQuery)=>{
                     mode: 'insensitive',
                 },
             },
+            {
+                category: {
+                    name: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+            },
+            {
+                farmer :{
+                    name:{
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    }
+                }
+            }
+
         ];
     }
 
     // Category filter
-    if (categoryId) {
-        where.categoryId = categoryId;
+    if (category) {
+        where.category = {
+            name: {
+                contains: category,
+                mode: "insensitive",
+            },
+        }
     }
 
     // Farmer filter
-    if (farmerId) {
-        where.farmerId = farmerId;
+    if (farmer) {
+        where.farmer = {
+            name: {
+                contains: farmer,
+                mode: "insensitive",
+            },
+        };
     }
 
     // Status filter
@@ -106,14 +125,25 @@ const getAllProducts = async (query:IProductQuery)=>{
         where.status = status;
     }
 
+    // Rating filter
+    if (rating) {
+        const ratingNumber = Number(rating);
+        if (!Number.isNaN(ratingNumber)) {
+            where.reviews = {
+                some: {
+                    rating: {
+                        gte: ratingNumber,
+                    },
+                },
+            };
+        }
+    }
     // Price filter
     if (minPrice || maxPrice) {
         where.price = {};
-
         if (minPrice) {
             where.price.gte = Number(minPrice);
         }
-
         if (maxPrice) {
             where.price.lte = Number(maxPrice);
         }

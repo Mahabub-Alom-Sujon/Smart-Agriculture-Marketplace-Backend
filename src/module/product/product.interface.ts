@@ -24,8 +24,9 @@ export interface UpdateProduct {
 
 export interface IProductQuery{
     searchTerm?: string;
-    categoryId?: string;
-    farmerId?: string;
+    category?: string;
+    farmer?: string;
+    rating?: string;
     status?: string;
     minPrice?: string;
     maxPrice?: string;
