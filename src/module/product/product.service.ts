@@ -194,7 +194,27 @@ const getSingleProduct = async (id: string) => {
         },
         include: {
             category: true,
-            farmer: true,
+            farmer: {
+                select:{
+                    id:true,
+                    name:true,
+                    certification:true,
+                    isDeleted:true,
+                    deletedAt:true,
+                    farms:{
+                        select:{
+                            id:true,
+                            farmName:true,
+                            location:true,
+                            landSize:true,
+                            soilType:true,
+                            farmerId:true,
+                            isDeleted:true,
+                            deletedAt:true
+                        }
+                    }
+                }
+            },
             reviews: {
                 include: {
                     buyer: true,
