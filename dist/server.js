@@ -4577,6 +4577,128 @@ var registerExpert = async (payload) => {
     refreshToken: refreshToken3
   };
 };
+var getAllPublicExperts = async (query) => {
+  const {
+    searchTerm,
+    specialization,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
+      isDeleted: false
+    }
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          email: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          specialization: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          qualification: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        }
+      ]
+    });
+  }
+  if (specialization) {
+    andConditions.push({
+      specialization: {
+        contains: specialization,
+        mode: "insensitive"
+      }
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [result, total] = await Promise.all([
+    prisma.expert.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      },
+      include: {
+        expertAdvices: true
+        // user: {
+        //     select: {
+        //         id: true,
+        //         name: true,
+        //         email: true,
+        //         phone: true,
+        //         imageUrl: true,
+        //         role: true,
+        //         status: true,
+        //     },
+        // },
+      }
+    }),
+    prisma.expert.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
+};
+var getSinglePublicExpert = async (id) => {
+  const result = await prisma.expert.findFirst({
+    where: {
+      id,
+      isDeleted: false
+    },
+    include: {
+      expertAdvices: true
+      // user: {
+      //     select: {
+      //         id: true,
+      //         name: true,
+      //         email: true,
+      //         phone: true,
+      //         address: true,
+      //         imageUrl: true,
+      //         role: true,
+      //         status: true,
+      //     },
+      // },
+    }
+  });
+  if (!result) {
+    throw new Error("Expert not found");
+  }
+  return result;
+};
 var getAllExperts = async (query) => {
   const {
     searchTerm,
@@ -4744,6 +4866,8 @@ var deleteExpert = async (id, userId, role) => {
 };
 var ExpertService = {
   registerExpert,
+  getAllPublicExperts,
+  getSinglePublicExpert,
   getAllExperts,
   getSingleExpert,
   deleteExpert
@@ -4759,6 +4883,34 @@ var registerExpert2 = catchAsync(
       statusCode: 201,
       success: true,
       message: "Expert registered successfully",
+      data: result
+    });
+  }
+);
+var getAllPublicExperts2 = catchAsync(
+  async (req, res) => {
+    const result = await ExpertService.getAllPublicExperts(
+      req.query
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Experts retrieved successfully",
+      meta: result.meta,
+      data: result.data
+    });
+  }
+);
+var getSinglePublicExpert2 = catchAsync(
+  async (req, res) => {
+    const { id } = req.params;
+    const result = await ExpertService.getSinglePublicExpert(
+      id
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Expert retrieved successfully",
       data: result
     });
   }
@@ -4810,6 +4962,8 @@ var deleteExpert2 = catchAsync(
 );
 var ExpertController = {
   registerExpert: registerExpert2,
+  getAllPublicExperts: getAllPublicExperts2,
+  getSinglePublicExpert: getSinglePublicExpert2,
   getAllExperts: getAllExperts2,
   getSingleExpert: getSingleExpert2,
   deleteExpert: deleteExpert2
@@ -4851,6 +5005,14 @@ router12.post(
   "/register",
   validateRequest(ExpertValidation.registerExpertValidationSchema),
   ExpertController.registerExpert
+);
+router12.get(
+  "/public",
+  ExpertController.getAllPublicExperts
+);
+router12.get(
+  "/public/:id",
+  ExpertController.getSinglePublicExpert
 );
 router12.get(
   "/",
@@ -5520,6 +5682,84 @@ router13.delete(
 );
 var ConsultationRoutes = router13;
 
+// src/module/farmer/farmer.route.ts
+import { Router as Router12 } from "express";
+
+// src/module/farmer/farmer.service.ts
+var getAllFarmers = async () => {
+  const farmers = await prisma.farmer.findMany({
+    where: {
+      isDeleted: false
+    },
+    include: {
+      farms: true
+      //crops: true,
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+  return farmers;
+};
+var getFarmerById = async (id) => {
+  const farmer = await prisma.farmer.findFirst({
+    where: {
+      id,
+      isDeleted: false
+    },
+    include: {
+      farms: {
+        include: {
+          crops: true
+        }
+      }
+    }
+  });
+  if (!farmer) {
+    throw new Error("Farmer not found");
+  }
+  return farmer;
+};
+var FarmerService = {
+  getAllFarmers,
+  getFarmerById
+};
+
+// src/module/farmer/farmer.controller.ts
+var getAllFarmers2 = catchAsync(
+  async (req, res) => {
+    const result = await FarmerService.getAllFarmers();
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Farmers retrieved successfully",
+      data: result
+    });
+  }
+);
+var getFarmerById2 = catchAsync(
+  async (req, res) => {
+    const id = req.params.id;
+    const result = await FarmerService.getFarmerById(id);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Farmer retrieved successfully",
+      data: result
+    });
+  }
+);
+var FarmerController = {
+  getAllFarmers: getAllFarmers2,
+  getFarmerById: getFarmerById2
+};
+
+// src/module/farmer/farmer.route.ts
+var router14 = Router12();
+router14.get("/", FarmerController.getAllFarmers);
+router14.get("/:id", FarmerController.getFarmerById);
+var FarmerRoutes = router14;
+
 // src/app.ts
 var app = express4();
 app.use(helmet());
@@ -5544,6 +5784,7 @@ app.use("/api/v1/experts", ExpertRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/audit-logs", AuditLogRoutes);
 app.use("/api/v1/farms", FarmRoutes);
+app.use("/api/v1/farmers", FarmerRoutes);
 app.use("/api/v1/crops", CropRoutes);
 app.use("/api/v1/consultations", ConsultationRoutes);
 app.use("/api/v1/orders", OrderRoutes);

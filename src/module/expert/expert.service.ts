@@ -134,6 +134,148 @@ const registerExpert = async (
 };
 
 // ==============================
+// Get Single Expert - Public
+// ==============================
+
+const getAllPublicExperts = async (query: IExpertQuery) => {
+    const {
+        searchTerm,
+        specialization,
+        page = "1",
+        limit = "10",
+        sortBy = "createdAt",
+        sortOrder = "desc",
+    } = query;
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const andConditions: ExpertWhereInput[] = [
+        {
+            isDeleted: false,
+        },
+    ];
+
+    if (searchTerm) {
+        andConditions.push({
+            OR: [
+                {
+                    name: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    email: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    specialization: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    qualification: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+            ],
+        });
+    }
+
+    if (specialization) {
+        andConditions.push({
+            specialization: {
+                contains: specialization,
+                mode: "insensitive",
+            },
+        });
+    }
+
+    const whereConditions: ExpertWhereInput = {
+        AND: andConditions,
+    };
+
+    const [result, total] = await Promise.all([
+        prisma.expert.findMany({
+            where: whereConditions,
+            skip,
+            take: limitNumber,
+            orderBy: {
+                [sortBy]: sortOrder === "asc" ? "asc" : "desc",
+            },
+            include: {
+                expertAdvices:true
+                // user: {
+                //     select: {
+                //         id: true,
+                //         name: true,
+                //         email: true,
+                //         phone: true,
+                //         imageUrl: true,
+                //         role: true,
+                //         status: true,
+                //     },
+                // },
+            },
+        }),
+
+        prisma.expert.count({
+            where: whereConditions,
+        }),
+    ]);
+
+    return {
+        meta: {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPage: Math.ceil(total / limitNumber),
+        },
+        data: result,
+    };
+};
+
+// ==============================
+// Get Single Expert - Public
+// ==============================
+
+const getSinglePublicExpert = async (id: string) => {
+    const result = await prisma.expert.findFirst({
+        where: {
+            id,
+            isDeleted: false,
+        },
+        include: {
+            expertAdvices:true,
+            // user: {
+            //     select: {
+            //         id: true,
+            //         name: true,
+            //         email: true,
+            //         phone: true,
+            //         address: true,
+            //         imageUrl: true,
+            //         role: true,
+            //         status: true,
+            //     },
+            // },
+        },
+    });
+
+    if (!result) {
+        throw new Error("Expert not found");
+    }
+
+    return result;
+};
+
+// ==============================
 // Get My Expert Profile
 // ==============================
 // const getMyExpertProfile = async (userId: string) => {
@@ -369,6 +511,8 @@ const deleteExpert = async (id: string, userId: string, role: Role) => {
 
 export const ExpertService = {
     registerExpert,
+    getAllPublicExperts,
+    getSinglePublicExpert,
     getAllExperts,
     getSingleExpert,
     deleteExpert

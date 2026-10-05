@@ -160,9 +160,9 @@ model Expert {
   name           String
   email          String         @unique
   city           String?
-  specialization String? // এক্সপার্টের দক্ষতার ক্ষেত্র (যেমন: মাটি, পোকা দমন)
-  qualification  String? // শিক্ষাগত যোগ্যতা (যেমন: BSc in Agriculture)
-  experience     Float? // কত বছরের অভিজ্ঞতা আছে
+  specialization String?
+  qualification  String?
+  experience     Float?
   userId         String         @unique
   user           User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   expertAdvices  ExpertAdvice[]

@@ -18,6 +18,7 @@ import {AuditLogRoutes} from "./module/auditLog/auditLog.route";
 import { ReviewRoutes } from "./module/review/review.route";
 import {ExpertRoutes} from "./module/expert/expert.route";
 import {ConsultationRoutes} from "./module/consultation/consultation.route";
+import {FarmerRoutes} from "./module/farmer/farmer.route";
 
 const app: Application = express();
 
@@ -53,6 +54,7 @@ app.use("/api/v1/experts", ExpertRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/audit-logs", AuditLogRoutes);
 app.use("/api/v1/farms", FarmRoutes);
+app.use("/api/v1/farmers", FarmerRoutes);
 app.use("/api/v1/crops", CropRoutes);
 app.use("/api/v1/consultations", ConsultationRoutes);
 app.use("/api/v1/orders", OrderRoutes);

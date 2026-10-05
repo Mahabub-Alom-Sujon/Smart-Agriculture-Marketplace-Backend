@@ -21,6 +21,46 @@ const registerExpert = catchAsync(
 );
 
 // ==============================
+// Get All Experts - Public
+// ==============================
+
+const getAllPublicExperts = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await ExpertService.getAllPublicExperts(
+            req.query
+        );
+
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Experts retrieved successfully",
+            meta: result.meta,
+            data: result.data,
+        });
+    }
+);
+
+// ==============================
+// Get Single Expert - Public
+// ==============================
+
+const getSinglePublicExpert = catchAsync(
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const result = await ExpertService.getSinglePublicExpert(
+            id as string
+        );
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Expert retrieved successfully",
+            data: result,
+        });
+    }
+);
+
+
+// ==============================
 // Get All Experts
 // ==============================
 const getAllExperts = catchAsync(
@@ -84,6 +124,8 @@ const deleteExpert = catchAsync(
 
 export const ExpertController = {
     registerExpert,
+    getAllPublicExperts,
+    getSinglePublicExpert,
     getAllExperts,
     getSingleExpert,
     deleteExpert

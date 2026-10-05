@@ -13,6 +13,19 @@ router.post(
     ExpertController.registerExpert
 );
 
+// ==================================================
+// PUBLIC ROUTES
+// ==================================================
+
+router.get(
+    "/public",
+    ExpertController.getAllPublicExperts
+);
+
+router.get(
+    "/public/:id",
+    ExpertController.getSinglePublicExpert
+);
 
 // ==============================
 // Super_admin admin Route
