@@ -3,6 +3,7 @@ import httpStatus from 'http-status'
 import { catchAsync } from '../../utils/catch-async'
 import { sendResponse } from '../../utils/send-response'
 import {categoryServices} from "./category.service";
+import { Role } from "../../../generated/prisma/enums";
 
 const createCategory = catchAsync(async (req: Request, res: Response) => {
     const result = await categoryServices.createCategory(req.body);
@@ -17,9 +18,7 @@ const createCategory = catchAsync(async (req: Request, res: Response) => {
 
 const getAllCategories = catchAsync(
     async (req: Request, res: Response) => {
-        const result =
-            await categoryServices.getAllCategories();
-
+        const result = await categoryServices.getAllCategories(req.query);
         sendResponse(res, {
             success: true,
             statusCode: httpStatus.CREATED,
@@ -62,18 +61,21 @@ const updateCategory = catchAsync(
 );
 
 const deleteCategory = catchAsync(async (req: Request, res: Response) => {
-    const result = await categoryServices.deleteCategory(
-        req.params.id as string,
-    )
-
+    const  id  = req.params.id as string;
+    const role = req.user?.role;
+    if (!role) {
+        throw new Error("Unauthorized");
+    }
+    const result = await categoryServices.deleteCategory(id, role )
     sendResponse(res, {
         statusCode: 200,
         success: true,
-        message: 'Category deleted successfully',
+        message: role === Role.SUPER_ADMIN
+                ? "Category permanently deleted successfully"
+                : "Category deleted successfully",
         data: result,
     });
 })
-
 export const categoryController={
     createCategory,
     getAllCategories,

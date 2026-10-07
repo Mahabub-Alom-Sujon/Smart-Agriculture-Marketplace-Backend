@@ -1,5 +1,6 @@
 import {prisma} from "../../lib/prisma";
-import {CreateCategory} from "./category.interface";
+import {CreateCategory, IQuery } from "./category.interface";
+import { Role } from "../../../generated/prisma/enums";
 
 const createCategory = async (payload: CreateCategory) => {
     return prisma.category.create({
@@ -7,24 +8,76 @@ const createCategory = async (payload: CreateCategory) => {
     });
 };
 
-const getAllCategories = async () => {
-    const result = await prisma.category.findMany({
-        where: {
-            isDeleted: false,
-        },
-        include: {
-            _count: {
-                select: {
-                    products: true,
+const getAllCategories = async (query:IQuery) => {
+    const {
+        searchTerm,
+        page = '1',
+        limit = '10',
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+    } = query;
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const where: any = {
+        isDeleted: false,
+    };
+
+    if (searchTerm){
+        where.OR=[
+            {
+                name: {
+                    contains: searchTerm,
+                    mode: 'insensitive',
                 },
             },
-        },
-        orderBy: {
-            createdAt: "desc",
-        },
-    });
+            {
+                description: {
+                    contains: searchTerm,
+                    mode: 'insensitive',
+                },
+            },
+        ]
+    }
 
-    return result;
+    // =========================
+    // Get Categories + Total
+    // =========================
+    const [categories, total] = await Promise.all([
+        prisma.category.findMany({
+            where,
+            skip,
+            take: limitNumber,
+            orderBy: {
+                [sortBy]: sortOrder === "asc" ? "asc" : "desc",
+            },
+            include: {
+                _count: {
+                    select: {
+                        products: true,
+                    },
+                },
+            },
+        }),
+        prisma.category.count({
+            where,
+        }),
+    ]);
+
+    // =========================
+    // Return
+    // =========================
+    return {
+        meta: {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPage: Math.ceil(total / limitNumber),
+        },
+
+        data: categories,
+    };
 };
 
 const getSingleCategory=async (id: string)=> {
@@ -64,7 +117,8 @@ const updateCategory = async (id: string, payload: CreateCategory) => {
     return result;
 }
 
-const deleteCategory = async (id: string ) => {
+const deleteCategory = async ( id: string, role: Role ) => {
+    // Check category exists
     const category = await prisma.category.findUnique({
         where: {
             id,
@@ -73,26 +127,45 @@ const deleteCategory = async (id: string ) => {
     });
 
     if (!category) {
-        throw new Error('Category not found' );
+        throw new Error("Category not found");
     }
 
-    // const result = await prisma.category.delete({
-    //     where: {
-    //         id,
-    //     },
-    // });
+    // =========================
+    // ADMIN → Soft Delete
+    // =========================
 
-    const result = await prisma.category.update({
-        where: {
-            id,
-        },
-        data: {
-            isDeleted: true,
-            deletedAt: new Date(),
-        },
-    });
+    if (role === Role.ADMIN) {
+        const result = await prisma.category.update({
+            where: {
+                id,
+            },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+            },
+        });
 
-    return result;
+        return result;
+    }
+
+    // =========================
+    // SUPER_ADMIN → Permanent Delete
+    // =========================
+
+    if (role === Role.SUPER_ADMIN) {
+        const result = await prisma.category.delete({
+            where: {
+                id,
+            },
+        });
+
+        return result;
+    }
+
+    // =========================
+    // Other Roles → Not Allowed
+    // =========================
+    throw new Error("You are not authorized to delete this category");
 }
 
 export const categoryServices ={

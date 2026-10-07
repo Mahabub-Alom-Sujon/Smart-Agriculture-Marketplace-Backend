@@ -3,6 +3,7 @@ import httpStatus from 'http-status'
 import { catchAsync } from '../../utils/catch-async'
 import { sendResponse } from '../../utils/send-response'
 import { productService } from './product.service'
+import {Role} from "../../../generated/prisma/enums";
 
 const createProduct = catchAsync(
     async (req: Request, res: Response) => {
@@ -67,15 +68,18 @@ const updateProduct = catchAsync(
 const deleteProduct = catchAsync(
     async (req: Request, res: Response) => {
         const  id  = req.params.id as string;
+        const role = req.user?.role;
+        if (!role) {
+            throw new Error("Unauthorized");
+        }
 
-        const result = await productService.deleteProduct(
-            id
-        );
-
+        const result = await productService.deleteProduct( id, role);
         sendResponse(res, {
             success: true,
             statusCode : httpStatus.OK,
-            message: 'Product deleted successfully',
+            message: role === Role.SUPER_ADMIN
+                ? "Product permanently deleted successfully"
+                : "Product deleted successfully",
             data: result,
         });
     }
@@ -85,11 +89,9 @@ const getMyProducts = catchAsync(
     async (req: Request, res: Response) => {
         const farmerId = req.user?.userId as string;
         //const farmerId = req.id as string;
-
         const result = await productService.getMyProducts(
             farmerId
         );
-
         sendResponse(res, {
             success: true,
             statusCode : httpStatus.OK,
@@ -102,12 +104,10 @@ const getMyProducts = catchAsync(
 const getProductsByCategory = catchAsync(
     async (req: Request, res: Response) => {
         const categoryId = req.params.categoryId as string;
-
         const result =
             await productService.getProductsByCategory(
                 categoryId
             );
-
         sendResponse(res, {
             success: true,
             statusCode : httpStatus.OK,
@@ -116,18 +116,15 @@ const getProductsByCategory = catchAsync(
         });
     }
 );
-
 const updateProductStatus = catchAsync(
     async (req: Request, res: Response) => {
         const  id  = req.params.id as string;
         const { status } = req.body;
-
         const result =
             await productService.updateProductStatus(
                 id,
                 status
             );
-
         sendResponse(res, {
             statusCode: 200,
             success: true,

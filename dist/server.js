@@ -76,7 +76,7 @@ var config = {
   "clientVersion": "7.8.0",
   "engineVersion": "3c6e192761c0362d496ed980de936e2f3cebcd3a",
   "activeProvider": "postgresql",
-  "inlineSchema": '// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../generated/prisma"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\n// ====================\n// ENUMS\n// ====================\n\nenum Role {\n  FARMER\n  BUYER\n  EXPERT\n  ADMIN\n  SUPER_ADMIN\n}\n\nenum UserStatus {\n  ACTIVE\n  INACTIVE\n  BLOCKED\n  DELETED\n}\n\nenum AuthProvider {\n  GOOGLE\n  CREDENTIAL\n}\n\nenum CropStatus {\n  PLANNED\n  GROWING\n  HARVESTED\n}\n\nenum ProductStatus {\n  ACTIVE\n  SOLD_OUT\n  INACTIVE\n}\n\nenum OrderStatus {\n  PENDING\n  PAYMENT_PENDING\n  PAID\n  PROCESSING\n  SHIPPED\n  COMPLETED\n  DELIVERED\n  CANCELLED\n  REFUNDED\n  CONFIRMED\n}\n\nenum ConsultationStatus {\n  PENDING\n  ACCEPTED\n  COMPLETED\n  CANCELLED\n}\n\nenum PaymentStatus {\n  PENDING\n  PAID\n  FAILED\n  REFUNDED\n  CANCELLED\n}\n\nenum PaymentProvider {\n  STRIPE\n}\n\n// ====================\n// USER\n// ====================\n\nmodel User {\n  id                 String       @id @default(uuid())\n  name               String\n  email              String       @unique\n  password           String?\n  phone              String?\n  address            String?\n  imageUrl           String?      @default("")\n  imagePublicId      String       @default("")\n  googleId           String?      @unique\n  authProvider       AuthProvider @default(CREDENTIAL)\n  emailVerified      Boolean      @default(false)\n  role               Role         @default(BUYER)\n  status             UserStatus   @default(ACTIVE)\n  needPasswordChange Boolean      @default(false)\n  isDeleted          Boolean      @default(false)\n  deletedAt          DateTime?\n  auditLogs          AuditLog[]\n  farmer             Farmer?\n  buyer              Buyer?\n  expert             Expert?\n  createdAt          DateTime     @default(now())\n  updatedAt          DateTime     @updatedAt\n}\n\n// ====================\n// FARMER MODEL\n// ====================\n\nmodel Farmer {\n  id            String         @id @default(uuid())\n  name          String\n  email         String         @unique\n  certification String?\n  userId        String         @unique\n  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  farms         Farm[]\n  products      Product[]\n  consultations Consultation[]\n  isDeleted     Boolean        @default(false)\n  deletedAt     DateTime?\n  createdAt     DateTime       @default(now())\n  updatedAt     DateTime       @updatedAt\n}\n\n// ====================\n// BUYER MODEL\n// ====================\n\nmodel Buyer {\n  id        String    @id @default(uuid())\n  name      String\n  email     String    @unique\n  address   String?\n  city      String?\n  country   String?\n  userId    String    @unique\n  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orders    Order[]\n  reviews   Review[]\n  payments  Payment[]\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\n// ====================\n// EXPERT MODEL\n// ====================\n\nmodel Expert {\n  id             String         @id @default(uuid())\n  name           String\n  email          String         @unique\n  city           String?\n  specialization String? // \u098F\u0995\u09CD\u09B8\u09AA\u09BE\u09B0\u09CD\u099F\u09C7\u09B0 \u09A6\u0995\u09CD\u09B7\u09A4\u09BE\u09B0 \u0995\u09CD\u09B7\u09C7\u09A4\u09CD\u09B0 (\u09AF\u09C7\u09AE\u09A8: \u09AE\u09BE\u099F\u09BF, \u09AA\u09CB\u0995\u09BE \u09A6\u09AE\u09A8)\n  qualification  String? // \u09B6\u09BF\u0995\u09CD\u09B7\u09BE\u0997\u09A4 \u09AF\u09CB\u0997\u09CD\u09AF\u09A4\u09BE (\u09AF\u09C7\u09AE\u09A8: BSc in Agriculture)\n  experience     Float? // \u0995\u09A4 \u09AC\u099B\u09B0\u09C7\u09B0 \u0985\u09AD\u09BF\u099C\u09CD\u099E\u09A4\u09BE \u0986\u099B\u09C7\n  userId         String         @unique\n  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  expertAdvices  ExpertAdvice[]\n  isDeleted      Boolean        @default(false)\n  deletedAt      DateTime?\n  createdAt      DateTime       @default(now())\n  updatedAt      DateTime       @updatedAt\n}\n\n// ====================\n// CONSULTATION\n// ====================\n\nmodel Consultation {\n  id        String             @id @default(uuid())\n  cropName  String?\n  problem   String\n  image     String?\n  status    ConsultationStatus @default(PENDING)\n  advice    ExpertAdvice?\n  farmerId  String\n  farmer    Farmer             @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted Boolean            @default(false)\n  deletedAt DateTime?\n  createdAt DateTime           @default(now())\n  updatedAt DateTime           @updatedAt\n\n  @@index([farmerId])\n}\n\n// ====================\n// AUDIT LOG\n// ====================\n\nmodel AuditLog {\n  id          String   @id @default(uuid())\n  action      String\n  resource    String\n  resourceId  String?\n  description String?\n  oldValue    Json?\n  newValue    Json?\n  ipAddress   String?\n  userAgent   String?\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n  user        User?    @relation(fields: [userId], references: [id])\n  userId      String?\n}\n\n// ====================\n// FARM\n// ====================\n\nmodel Farm {\n  id        String    @id @default(uuid())\n  farmName  String\n  location  String\n  landSize  Float?\n  soilType  String?\n  farmerId  String\n  farmer    Farmer    @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  crops     Crop[]\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\n// ====================\n// CROP\n// ====================\n\nmodel Crop {\n  id           String     @id @default(uuid())\n  name         String\n  variety      String?\n  plantingDate DateTime?\n  harvestDate  DateTime?\n  status       CropStatus @default(PLANNED)\n  farmId       String\n  farm         Farm       @relation(fields: [farmId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted    Boolean    @default(false)\n  deletedAt    DateTime?\n  createdAt    DateTime   @default(now())\n  updatedAt    DateTime   @updatedAt\n}\n\n// ====================\n// EXPERT ADVICE\n// ====================\n\nmodel ExpertAdvice {\n  id             String       @id @default(uuid())\n  diagnosis      String\n  recommendation String\n  fertilizer     String?\n  pesticide      String?\n  consultationId String       @unique\n  expertId       String\n  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  expert         Expert       @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted      Boolean      @default(false)\n  deletedAt      DateTime?\n  createdAt      DateTime     @default(now())\n  updatedAt      DateTime     @updatedAt\n}\n\n// ====================\n// CATEGORY\n// ====================\n\nmodel Category {\n  id          String    @id @default(uuid())\n  name        String    @unique\n  description String?\n  image       String?\n  products    Product[]\n  isDeleted   Boolean   @default(false)\n  deletedAt   DateTime?\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n}\n\n// ====================\n// PRODUCT\n// ====================\n\nmodel Product {\n  id          String        @id @default(uuid())\n  name        String\n  description String?\n  price       Int\n  quantity    Float\n  unit        String        @default("KG")\n  image       String?\n  status      ProductStatus @default(ACTIVE)\n  farmerId    String\n  categoryId  String\n  category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  farmer      Farmer        @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orderItems  OrderItem[]\n  reviews     Review[]\n  isDeleted   Boolean       @default(false)\n  deletedAt   DateTime?\n  createdAt   DateTime      @default(now())\n  updatedAt   DateTime      @updatedAt\n}\n\n// ====================\n// ORDER\n// ====================\n\nmodel Order {\n  id              String      @id @default(uuid())\n  orderNumber     String      @unique\n  totalAmount     Int\n  deliveryAddress String\n  status          OrderStatus @default(PENDING)\n  buyerId         String\n  farmerId        String\n  buyer           Buyer       @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orderItems      OrderItem[]\n  reviews         Review[]\n  payment         Payment?\n  isDeleted       Boolean     @default(false)\n  deletedAt       DateTime?\n  createdAt       DateTime    @default(now())\n  updatedAt       DateTime    @updatedAt\n}\n\n// =========================\n// ORDER ITEM\n// =========================\n\nmodel OrderItem {\n  id        String    @id @default(uuid())\n  quantity  Float\n  price     Int\n  orderId   String\n  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  productId String\n  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\nmodel Payment {\n  id                    String          @id @default(uuid())\n  orderId               String          @unique\n  amount                Int\n  currency              String          @default("bdt")\n  provider              PaymentProvider @default(STRIPE)\n  status                PaymentStatus   @default(PENDING)\n  stripeSessionId       String?         @unique\n  stripePaymentIntentId String?         @unique\n  paidAt                DateTime?\n  buyerId               String?\n  order                 Order           @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  buyer                 Buyer?          @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  createdAt             DateTime        @default(now())\n  updatedAt             DateTime        @updatedAt\n}\n\n// =========================\n// REVIEW\n// =========================\n\nmodel Review {\n  id        String    @id @default(uuid())\n  rating    Float\n  comment   String?\n  buyerId   String\n  buyer     Buyer     @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  productId String\n  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orderId   String\n  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n',
+  "inlineSchema": '// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Get a free hosted Postgres database in seconds: `npx create-db`\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../generated/prisma"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\n// ====================\n// ENUMS\n// ====================\n\nenum Role {\n  FARMER\n  BUYER\n  EXPERT\n  ADMIN\n  SUPER_ADMIN\n}\n\nenum UserStatus {\n  ACTIVE\n  INACTIVE\n  BLOCKED\n  DELETED\n}\n\nenum AuthProvider {\n  GOOGLE\n  CREDENTIAL\n}\n\nenum CropStatus {\n  PLANNED\n  GROWING\n  HARVESTED\n}\n\nenum ProductStatus {\n  ACTIVE\n  SOLD_OUT\n  INACTIVE\n}\n\nenum OrderStatus {\n  PENDING\n  PAYMENT_PENDING\n  PAID\n  PROCESSING\n  SHIPPED\n  COMPLETED\n  DELIVERED\n  CANCELLED\n  REFUNDED\n  CONFIRMED\n}\n\nenum ConsultationStatus {\n  PENDING\n  ACCEPTED\n  COMPLETED\n  CANCELLED\n}\n\nenum PaymentStatus {\n  PENDING\n  PAID\n  FAILED\n  REFUNDED\n  CANCELLED\n}\n\nenum PaymentProvider {\n  STRIPE\n}\n\n// ====================\n// USER\n// ====================\n\nmodel User {\n  id                 String       @id @default(uuid())\n  name               String\n  email              String       @unique\n  password           String?\n  phone              String?\n  address            String?\n  imageUrl           String?      @default("")\n  imagePublicId      String       @default("")\n  googleId           String?      @unique\n  authProvider       AuthProvider @default(CREDENTIAL)\n  emailVerified      Boolean      @default(false)\n  role               Role         @default(BUYER)\n  status             UserStatus   @default(ACTIVE)\n  needPasswordChange Boolean      @default(false)\n  isDeleted          Boolean      @default(false)\n  deletedAt          DateTime?\n  auditLogs          AuditLog[]\n  farmer             Farmer?\n  buyer              Buyer?\n  expert             Expert?\n  createdAt          DateTime     @default(now())\n  updatedAt          DateTime     @updatedAt\n}\n\n// ====================\n// FARMER MODEL\n// ====================\n\nmodel Farmer {\n  id            String         @id @default(uuid())\n  name          String\n  email         String         @unique\n  certification String?\n  userId        String         @unique\n  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  farms         Farm[]\n  products      Product[]\n  consultations Consultation[]\n  isDeleted     Boolean        @default(false)\n  deletedAt     DateTime?\n  createdAt     DateTime       @default(now())\n  updatedAt     DateTime       @updatedAt\n}\n\n// ====================\n// BUYER MODEL\n// ====================\n\nmodel Buyer {\n  id        String    @id @default(uuid())\n  name      String\n  email     String    @unique\n  address   String?\n  city      String?\n  country   String?\n  userId    String    @unique\n  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orders    Order[]\n  reviews   Review[]\n  payments  Payment[]\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\n// ====================\n// EXPERT MODEL\n// ====================\n\nmodel Expert {\n  id             String         @id @default(uuid())\n  name           String\n  email          String         @unique\n  city           String?\n  specialization String?\n  qualification  String?\n  experience     Float?\n  userId         String         @unique\n  user           User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  expertAdvices  ExpertAdvice[]\n  isDeleted      Boolean        @default(false)\n  deletedAt      DateTime?\n  createdAt      DateTime       @default(now())\n  updatedAt      DateTime       @updatedAt\n}\n\n// ====================\n// CONSULTATION\n// ====================\n\nmodel Consultation {\n  id        String             @id @default(uuid())\n  cropName  String?\n  problem   String\n  image     String?\n  status    ConsultationStatus @default(PENDING)\n  advice    ExpertAdvice?\n  farmerId  String\n  farmer    Farmer             @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted Boolean            @default(false)\n  deletedAt DateTime?\n  createdAt DateTime           @default(now())\n  updatedAt DateTime           @updatedAt\n\n  @@index([farmerId])\n}\n\n// ====================\n// AUDIT LOG\n// ====================\n\nmodel AuditLog {\n  id          String   @id @default(uuid())\n  action      String\n  resource    String\n  resourceId  String?\n  description String?\n  oldValue    Json?\n  newValue    Json?\n  ipAddress   String?\n  userAgent   String?\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n  user        User?    @relation(fields: [userId], references: [id])\n  userId      String?\n}\n\n// ====================\n// FARM\n// ====================\n\nmodel Farm {\n  id        String    @id @default(uuid())\n  farmName  String\n  location  String\n  landSize  Float?\n  soilType  String?\n  farmerId  String\n  farmer    Farmer    @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  crops     Crop[]\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\n// ====================\n// CROP\n// ====================\n\nmodel Crop {\n  id           String     @id @default(uuid())\n  name         String\n  variety      String?\n  plantingDate DateTime?\n  harvestDate  DateTime?\n  status       CropStatus @default(PLANNED)\n  farmId       String\n  farm         Farm       @relation(fields: [farmId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted    Boolean    @default(false)\n  deletedAt    DateTime?\n  createdAt    DateTime   @default(now())\n  updatedAt    DateTime   @updatedAt\n}\n\n// ====================\n// EXPERT ADVICE\n// ====================\n\nmodel ExpertAdvice {\n  id             String       @id @default(uuid())\n  diagnosis      String\n  recommendation String\n  fertilizer     String?\n  pesticide      String?\n  consultationId String       @unique\n  expertId       String\n  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  expert         Expert       @relation(fields: [expertId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted      Boolean      @default(false)\n  deletedAt      DateTime?\n  createdAt      DateTime     @default(now())\n  updatedAt      DateTime     @updatedAt\n}\n\n// ====================\n// CATEGORY\n// ====================\n\nmodel Category {\n  id          String    @id @default(uuid())\n  name        String    @unique\n  description String?\n  image       String?\n  products    Product[]\n  isDeleted   Boolean   @default(false)\n  deletedAt   DateTime?\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n}\n\n// ====================\n// PRODUCT\n// ====================\n\nmodel Product {\n  id          String        @id @default(uuid())\n  name        String\n  description String?\n  price       Int\n  quantity    Float\n  unit        String        @default("KG")\n  image       String?\n  status      ProductStatus @default(ACTIVE)\n  farmerId    String\n  categoryId  String\n  category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  farmer      Farmer        @relation(fields: [farmerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orderItems  OrderItem[]\n  reviews     Review[]\n  isDeleted   Boolean       @default(false)\n  deletedAt   DateTime?\n  createdAt   DateTime      @default(now())\n  updatedAt   DateTime      @updatedAt\n}\n\n// ====================\n// ORDER\n// ====================\n\nmodel Order {\n  id              String      @id @default(uuid())\n  orderNumber     String      @unique\n  totalAmount     Int\n  deliveryAddress String\n  status          OrderStatus @default(PENDING)\n  buyerId         String\n  farmerId        String\n  buyer           Buyer       @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orderItems      OrderItem[]\n  reviews         Review[]\n  payment         Payment?\n  isDeleted       Boolean     @default(false)\n  deletedAt       DateTime?\n  createdAt       DateTime    @default(now())\n  updatedAt       DateTime    @updatedAt\n}\n\n// =========================\n// ORDER ITEM\n// =========================\n\nmodel OrderItem {\n  id        String    @id @default(uuid())\n  quantity  Float\n  price     Int\n  orderId   String\n  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  productId String\n  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\nmodel Payment {\n  id                    String          @id @default(uuid())\n  orderId               String          @unique\n  amount                Int\n  currency              String          @default("bdt")\n  provider              PaymentProvider @default(STRIPE)\n  status                PaymentStatus   @default(PENDING)\n  stripeSessionId       String?         @unique\n  stripePaymentIntentId String?         @unique\n  paidAt                DateTime?\n  buyerId               String?\n  order                 Order           @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  buyer                 Buyer?          @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  createdAt             DateTime        @default(now())\n  updatedAt             DateTime        @updatedAt\n}\n\n// =========================\n// REVIEW\n// =========================\n\nmodel Review {\n  id        String    @id @default(uuid())\n  rating    Float\n  comment   String?\n  buyerId   String\n  buyer     Buyer     @relation(fields: [buyerId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  productId String\n  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  orderId   String\n  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)\n  isDeleted Boolean   @default(false)\n  deletedAt DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n',
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -1187,23 +1187,65 @@ var createCategory = async (payload) => {
     data: payload
   });
 };
-var getAllCategories = async () => {
-  const result = await prisma.category.findMany({
-    where: {
-      isDeleted: false
-    },
-    include: {
-      _count: {
-        select: {
-          products: true
+var getAllCategories = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const where = {
+    isDeleted: false
+  };
+  if (searchTerm) {
+    where.OR = [
+      {
+        name: {
+          contains: searchTerm,
+          mode: "insensitive"
+        }
+      },
+      {
+        description: {
+          contains: searchTerm,
+          mode: "insensitive"
         }
       }
+    ];
+  }
+  const [categories, total] = await Promise.all([
+    prisma.category.findMany({
+      where,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      },
+      include: {
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    }),
+    prisma.category.count({
+      where
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
     },
-    orderBy: {
-      createdAt: "desc"
-    }
-  });
-  return result;
+    data: categories
+  };
 };
 var getSingleCategory = async (id) => {
   const result = await prisma.category.findFirst({
@@ -1236,7 +1278,7 @@ var updateCategory = async (id, payload) => {
   });
   return result;
 };
-var deleteCategory = async (id) => {
+var deleteCategory = async (id, role) => {
   const category = await prisma.category.findUnique({
     where: {
       id,
@@ -1246,16 +1288,27 @@ var deleteCategory = async (id) => {
   if (!category) {
     throw new Error("Category not found");
   }
-  const result = await prisma.category.update({
-    where: {
-      id
-    },
-    data: {
-      isDeleted: true,
-      deletedAt: /* @__PURE__ */ new Date()
-    }
-  });
-  return result;
+  if (role === Role.ADMIN) {
+    const result = await prisma.category.update({
+      where: {
+        id
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return result;
+  }
+  if (role === Role.SUPER_ADMIN) {
+    const result = await prisma.category.delete({
+      where: {
+        id
+      }
+    });
+    return result;
+  }
+  throw new Error("You are not authorized to delete this category");
 };
 var categoryServices = {
   createCategory,
@@ -1277,7 +1330,7 @@ var createCategory2 = catchAsync(async (req, res) => {
 });
 var getAllCategories2 = catchAsync(
   async (req, res) => {
-    const result = await categoryServices.getAllCategories();
+    const result = await categoryServices.getAllCategories(req.query);
     sendResponse(res, {
       success: true,
       statusCode: httpStatus4.CREATED,
@@ -1314,13 +1367,16 @@ var updateCategory2 = catchAsync(
   }
 );
 var deleteCategory2 = catchAsync(async (req, res) => {
-  const result = await categoryServices.deleteCategory(
-    req.params.id
-  );
+  const id = req.params.id;
+  const role = req.user?.role;
+  if (!role) {
+    throw new Error("Unauthorized");
+  }
+  const result = await categoryServices.deleteCategory(id, role);
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Category deleted successfully",
+    message: role === Role.SUPER_ADMIN ? "Category permanently deleted successfully" : "Category deleted successfully",
     data: result
   });
 });
@@ -1665,7 +1721,7 @@ var updateProduct = async (id, payload) => {
   });
   return result;
 };
-var deleteProduct = async (id) => {
+var deleteProduct = async (id, role) => {
   const product = await prisma.product.findFirst({
     where: {
       id,
@@ -1675,17 +1731,27 @@ var deleteProduct = async (id) => {
   if (!product) {
     throw new Error("Product not found");
   }
-  const result = await prisma.product.update({
-    where: {
-      id
-    },
-    data: {
-      isDeleted: true,
-      deletedAt: /* @__PURE__ */ new Date(),
-      status: ProductStatus.INACTIVE
-    }
-  });
-  return result;
+  if (role === Role.ADMIN) {
+    const result = await prisma.category.update({
+      where: {
+        id
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: /* @__PURE__ */ new Date(),
+        status: ProductStatus.INACTIVE
+      }
+    });
+    return result;
+  }
+  if (role === Role.SUPER_ADMIN) {
+    const result = await prisma.category.delete({
+      where: {
+        id
+      }
+    });
+    return result;
+  }
 };
 var getMyProducts = async (userId) => {
   if (!userId) {
@@ -1842,13 +1908,15 @@ var updateProduct2 = catchAsync(
 var deleteProduct2 = catchAsync(
   async (req, res) => {
     const id = req.params.id;
-    const result = await productService.deleteProduct(
-      id
-    );
+    const role = req.user?.role;
+    if (!role) {
+      throw new Error("Unauthorized");
+    }
+    const result = await productService.deleteProduct(id, role);
     sendResponse(res, {
       success: true,
       statusCode: httpStatus5.OK,
-      message: "Product deleted successfully",
+      message: role === Role.SUPER_ADMIN ? "Product permanently deleted successfully" : "Product deleted successfully",
       data: result
     });
   }
@@ -2411,6 +2479,91 @@ var getAllFarms = async () => {
   });
   return farms;
 };
+var getAllAdminFarms = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
+      isDeleted: false
+    }
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          farmName: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          location: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          soilType: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          farmer: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          farmer: {
+            certification: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [result, total] = await Promise.all([
+    prisma.farm.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      },
+      include: {
+        farmer: true
+      }
+    }),
+    prisma.farm.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
+};
 var getFarmById = async (id) => {
   const farm = await prisma.farm.findFirst({
     where: {
@@ -2494,13 +2647,47 @@ var deleteFarm = async (id, farmerId) => {
   });
   return deletedFarm;
 };
+var deleteAdminFarm = async (id, role) => {
+  const farm = await prisma.farm.findUnique({
+    where: {
+      id,
+      isDeleted: false
+    }
+  });
+  if (!farm) {
+    throw new Error("Farm not found");
+  }
+  if (role === Role.ADMIN) {
+    const result = await prisma.farm.update({
+      where: {
+        id
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return result;
+  }
+  if (role === Role.SUPER_ADMIN) {
+    const result = await prisma.farm.delete({
+      where: {
+        id
+      }
+    });
+    return result;
+  }
+  throw new Error("You are not authorized to delete this category");
+};
 var FarmService = {
   createFarm,
   getAllFarms,
+  getAllAdminFarms,
   getFarmById,
   getFarmsByFarmer,
   updateFarm,
-  deleteFarm
+  deleteFarm,
+  deleteAdminFarm
 };
 
 // src/module/farm/farm.controller.ts
@@ -2522,6 +2709,19 @@ var createFarm2 = catchAsync(
 var getAllFarms2 = catchAsync(
   async (req, res) => {
     const result = await FarmService.getAllFarms();
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Farms retrieved successfully",
+      data: result
+    });
+  }
+);
+var getAllAdminFarms2 = catchAsync(
+  async (req, res) => {
+    const result = await FarmService.getAllAdminFarms(
+      req.query
+    );
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -2587,13 +2787,34 @@ var deleteFarm2 = catchAsync(
     });
   }
 );
+var deleteAdminFarm2 = catchAsync(
+  async (req, res) => {
+    const id = req.params.id;
+    const role = req.user?.role;
+    if (!role) {
+      throw new Error("Unauthorized");
+    }
+    const result = await FarmService.deleteAdminFarm(
+      id,
+      role
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Farm deleted successfully",
+      data: result
+    });
+  }
+);
 var FarmController = {
   createFarm: createFarm2,
   getAllFarms: getAllFarms2,
+  getAllAdminFarms: getAllAdminFarms2,
   getFarmById: getFarmById2,
   getFarmsByFarmer: getFarmsByFarmer2,
   updateFarm: updateFarm2,
-  deleteFarm: deleteFarm2
+  deleteFarm: deleteFarm2,
+  deleteAdminFarm: deleteAdminFarm2
 };
 
 // src/module/farm/farm.validation.ts
@@ -2635,6 +2856,11 @@ router5.get(
   FarmController.getAllFarms
 );
 router5.get(
+  "/admin",
+  auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
+  FarmController.getAllAdminFarms
+);
+router5.get(
   "/farmer/:farmerId",
   FarmController.getFarmsByFarmer
 );
@@ -2650,13 +2876,18 @@ router5.post(
 );
 router5.patch(
   "/:id",
-  auth(Role.FARMER),
+  auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
   validateRequest(updateFarmValidation),
   FarmController.updateFarm
 );
 router5.delete(
   "/:id",
-  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
+  auth(Role.FARMER),
+  FarmController.deleteFarm
+);
+router5.delete(
+  "/admin/:id",
+  auth(Role.ADMIN, Role.SUPER_ADMIN),
   FarmController.deleteFarm
 );
 var FarmRoutes = router5;
@@ -3164,6 +3395,65 @@ var getMyOrders = async (userId) => {
     orderBy: { createdAt: "desc" }
   });
 };
+var getAllOrders = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
+      isDeleted: false
+    }
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          buyer: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [result, total] = await Promise.all([
+    prisma.order.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      },
+      include: {
+        buyer: true
+      }
+    }),
+    prisma.order.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
+};
 var getOrderById = async (id, userId, role) => {
   const order = await prisma.order.findUnique({
     where: { id },
@@ -3212,6 +3502,7 @@ var updateOrderStatus = async (id, status, queryUser) => {
 var orderService = {
   createOrder,
   getMyOrders,
+  getAllOrders,
   getOrderById,
   updateOrderStatus
 };
@@ -3230,6 +3521,20 @@ var createOrder2 = catchAsync(async (req, res) => {
     data: result
   });
 });
+var getAllOrders2 = catchAsync(
+  async (req, res) => {
+    const result = await orderService.getAllOrders(
+      req.query
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Orders retrieved successfully",
+      meta: result.meta,
+      data: result.data
+    });
+  }
+);
 var getMyOrders2 = catchAsync(async (req, res) => {
   const user = req.user;
   const result = await orderService.getMyOrders(
@@ -3273,6 +3578,7 @@ var updateOrderStatus2 = catchAsync(async (req, res) => {
 });
 var orderController = {
   createOrder: createOrder2,
+  getAllOrders: getAllOrders2,
   getMyOrders: getMyOrders2,
   getOrderById: getOrderById2,
   updateOrderStatus: updateOrderStatus2
@@ -3317,6 +3623,11 @@ router7.post(
   auth(Role.BUYER),
   validateRequest(OrderValidation.createOrderValidation),
   orderController.createOrder
+);
+router7.get(
+  "/",
+  auth(Role.ADMIN, Role.SUPER_ADMIN),
+  orderController.getAllOrders
 );
 router7.get(
   "/my-orders",
@@ -4645,17 +4956,6 @@ var getAllPublicExperts = async (query) => {
       },
       include: {
         expertAdvices: true
-        // user: {
-        //     select: {
-        //         id: true,
-        //         name: true,
-        //         email: true,
-        //         phone: true,
-        //         imageUrl: true,
-        //         role: true,
-        //         status: true,
-        //     },
-        // },
       }
     }),
     prisma.expert.count({
@@ -4680,18 +4980,6 @@ var getSinglePublicExpert = async (id) => {
     },
     include: {
       expertAdvices: true
-      // user: {
-      //     select: {
-      //         id: true,
-      //         name: true,
-      //         email: true,
-      //         phone: true,
-      //         address: true,
-      //         imageUrl: true,
-      //         role: true,
-      //         status: true,
-      //     },
-      // },
     }
   });
   if (!result) {
@@ -4856,7 +5144,6 @@ var deleteExpert = async (id, userId, role) => {
           isDeleted: true,
           deletedAt: /* @__PURE__ */ new Date(),
           status: "DELETED"
-          // UserStatus enum অনুযায়ী
         }
       });
       return updatedExpert;
@@ -5701,6 +5988,97 @@ var getAllFarmers = async () => {
   });
   return farmers;
 };
+var getAllAdminFarmers = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
+      isDeleted: false
+    }
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          email: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          certification: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        // Farm name
+        {
+          farms: {
+            some: {
+              farmName: {
+                contains: searchTerm,
+                mode: "insensitive"
+              }
+            }
+          }
+        },
+        // Farm location
+        {
+          farms: {
+            some: {
+              location: {
+                contains: searchTerm,
+                mode: "insensitive"
+              }
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [result, total] = await Promise.all([
+    prisma.farmer.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      },
+      include: {
+        farms: true
+      }
+    }),
+    prisma.farmer.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
+};
 var getFarmerById = async (id) => {
   const farmer = await prisma.farmer.findFirst({
     where: {
@@ -5720,15 +6098,61 @@ var getFarmerById = async (id) => {
   }
   return farmer;
 };
+var deleteFarmer = async (id, role) => {
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      id,
+      isDeleted: false
+    }
+  });
+  if (!farmer) {
+    throw new Error("Farmer not found");
+  }
+  if (role === Role.ADMIN) {
+    const result = await prisma.farmer.update({
+      where: {
+        id
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return result;
+  }
+  if (role === Role.SUPER_ADMIN) {
+    const result = await prisma.farmer.delete({
+      where: {
+        id
+      }
+    });
+    return result;
+  }
+  throw new Error("You are not authorized to delete this Farmer");
+};
 var FarmerService = {
   getAllFarmers,
-  getFarmerById
+  getFarmerById,
+  getAllAdminFarmers,
+  deleteFarmer
 };
 
 // src/module/farmer/farmer.controller.ts
+import httpStatus11 from "http-status";
 var getAllFarmers2 = catchAsync(
   async (req, res) => {
     const result = await FarmerService.getAllFarmers();
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Farmers retrieved successfully",
+      data: result
+    });
+  }
+);
+var getAllAdminFarmers2 = catchAsync(
+  async (req, res) => {
+    const result = await FarmerService.getAllAdminFarmers(req.query);
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -5749,15 +6173,46 @@ var getFarmerById2 = catchAsync(
     });
   }
 );
+var deleteFarmer2 = catchAsync(
+  async (req, res) => {
+    const id = req.params.id;
+    const role = req.user?.role;
+    if (!role) {
+      throw new Error("Unauthorized");
+    }
+    const result = await FarmerService.deleteFarmer(
+      id,
+      role
+    );
+    sendResponse(res, {
+      statusCode: httpStatus11.OK,
+      success: true,
+      message: "Expert deleted successfully",
+      data: result
+    });
+  }
+);
 var FarmerController = {
   getAllFarmers: getAllFarmers2,
-  getFarmerById: getFarmerById2
+  getFarmerById: getFarmerById2,
+  getAllAdminFarmers: getAllAdminFarmers2,
+  deleteFarmer: deleteFarmer2
 };
 
 // src/module/farmer/farmer.route.ts
 var router14 = Router12();
 router14.get("/", FarmerController.getAllFarmers);
+router14.get(
+  "/admin",
+  auth(Role.SUPER_ADMIN, Role.ADMIN),
+  FarmerController.getAllAdminFarmers
+);
 router14.get("/:id", FarmerController.getFarmerById);
+router14.delete(
+  "/:id",
+  auth(Role.SUPER_ADMIN, Role.ADMIN),
+  FarmerController.getFarmerById
+);
 var FarmerRoutes = router14;
 
 // src/app.ts
@@ -5801,7 +6256,7 @@ var app_default = app;
 
 // src/utils/seed.ts
 import bcrypt3 from "bcryptjs";
-import httpStatus11 from "http-status";
+import httpStatus12 from "http-status";
 var seedSuperAdmin = async () => {
   try {
     const isSuperAdminExist = await prisma.user.findFirst({
@@ -5818,7 +6273,7 @@ var seedSuperAdmin = async () => {
     const password = config_default.super_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus11.INTERNAL_SERVER_ERROR,
+        httpStatus12.INTERNAL_SERVER_ERROR,
         "Super Admin Name , Email, Password Missing In Env File!!!"
       );
     }
@@ -5862,7 +6317,7 @@ var seedTesterAdmin = async () => {
     const password = config_default.tester_admin_password;
     if (!name || !email || !password) {
       throw new AppError(
-        httpStatus11.INTERNAL_SERVER_ERROR,
+        httpStatus12.INTERNAL_SERVER_ERROR,
         "Tester Admin Name , Email, Password Missing In Env File!!!"
       );
     }

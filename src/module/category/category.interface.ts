@@ -4,8 +4,10 @@ export interface CreateCategory {
     image?: string;
 }
 
-export interface Query {
+export interface IQuery {
     page?: string;
     limit?: string;
     searchTerm?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
 }

@@ -21,6 +21,17 @@ router.get(
     FarmController.getAllFarms,
 );
 
+
+// ==============================
+// Admin Routes
+// ==============================
+
+router.get(
+    "/admin",
+    auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
+    FarmController.getAllAdminFarms,
+);
+
 router.get(
     "/farmer/:farmerId",
     FarmController.getFarmsByFarmer,
@@ -44,16 +55,23 @@ router.post(
 
 router.patch(
     "/:id",
-    auth(Role.FARMER),
+    auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
     validateRequest(updateFarmValidation),
     FarmController.updateFarm,
 );
 
+
 router.delete(
     "/:id",
-    auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
+    auth(Role.FARMER),
     FarmController.deleteFarm,
 );
 
+
+router.delete(
+    "/admin/:id",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    FarmController.deleteFarm,
+);
 
 export const FarmRoutes = router;

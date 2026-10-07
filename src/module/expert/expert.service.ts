@@ -4,8 +4,8 @@ import {AuthProvider, Role, UserStatus} from '../../../generated/prisma/enums'
 import config from '../../config'
 import { prisma } from '../../lib/prisma'
 import { jwtUtils } from '../../utils/jwt'
-import {IExpertQuery, IRegisterExpertPayload} from "./expert.interface";
-import {ExpertWhereInput} from "../../../generated/prisma/models/Expert";
+import { IExpertQuery, IRegisterExpertPayload} from "./expert.interface";
+import { ExpertWhereInput } from "../../../generated/prisma/models/Expert";
 
 const registerExpert = async (
     payload: IRegisterExpertPayload
@@ -211,17 +211,6 @@ const getAllPublicExperts = async (query: IExpertQuery) => {
             },
             include: {
                 expertAdvices:true
-                // user: {
-                //     select: {
-                //         id: true,
-                //         name: true,
-                //         email: true,
-                //         phone: true,
-                //         imageUrl: true,
-                //         role: true,
-                //         status: true,
-                //     },
-                // },
             },
         }),
 
@@ -253,18 +242,6 @@ const getSinglePublicExpert = async (id: string) => {
         },
         include: {
             expertAdvices:true,
-            // user: {
-            //     select: {
-            //         id: true,
-            //         name: true,
-            //         email: true,
-            //         phone: true,
-            //         address: true,
-            //         imageUrl: true,
-            //         role: true,
-            //         status: true,
-            //     },
-            // },
         },
     });
 
@@ -318,17 +295,14 @@ const getAllExperts = async (query: IExpertQuery) => {
         sortBy = "createdAt",
         sortOrder = "desc",
     } = query;
-
     const pageNumber = Number(page);
     const limitNumber = Number(limit);
     const skip = (pageNumber - 1) * limitNumber;
-
     const andConditions: ExpertWhereInput[] = [
         {
             isDeleted: false,
         },
     ];
-
     if (searchTerm) {
         andConditions.push({
             OR: [
@@ -359,7 +333,6 @@ const getAllExperts = async (query: IExpertQuery) => {
             ],
         });
     }
-
     if (specialization) {
         andConditions.push({
             specialization: {
@@ -368,11 +341,9 @@ const getAllExperts = async (query: IExpertQuery) => {
             },
         });
     }
-
     const whereConditions: ExpertWhereInput = {
         AND: andConditions,
     };
-
     const [result, total] = await Promise.all([
         prisma.expert.findMany({
             where: whereConditions,
@@ -450,41 +421,29 @@ const getSingleExpert = async (id: string) => {
 // Delete Expert (Service)
 // ==============================
 const deleteExpert = async (id: string, userId: string, role: Role) => {
-
-    // ডিলিট করার আগে এক্সপার্ট প্রোফাইলটি চেক করে নেওয়া
     const expert = await prisma.expert.findUnique({
         where: { id },
     });
-
     if (!expert) {
         throw new Error( "Expert profile not found");
     }
-
-    // ১. যদি SUPER_ADMIN হয় -> ডাটাবেজ থেকে Permanent/Hard Delete হবে (Expert & User দুটোই)
     if (role === Role.SUPER_ADMIN) {
         return await prisma.$transaction(async (tx) => {
-            // প্রথমে Expert প্রোফাইল ডিলিট
             const deletedExpert = await tx.expert.delete({
                 where: { id },
             });
-            // তারপর মেইন User অ্যাকাউন্ট ডিলিট
             await tx.user.delete({
                 where: { id: expert.userId },
             });
             return deletedExpert;
         });
     }
-
-    // ২. যদি ADMIN হয় অথবা এক্সপার্ট নিজে নিজের প্রোফাইল ডিলিট করতে চায় -> Soft Delete
     const isOwnProfile = expert.userId === userId;
-
     if (role === Role.ADMIN || isOwnProfile) {
         if (expert.isDeleted) {
             throw new Error( "Expert profile is already deleted");
         }
-
         return await prisma.$transaction(async (tx) => {
-            // Expert প্রোফাইল Soft Delete
             const updatedExpert = await tx.expert.update({
                 where: { id },
                 data: {
@@ -492,20 +451,17 @@ const deleteExpert = async (id: string, userId: string, role: Role) => {
                     deletedAt: new Date(),
                 },
             });
-            // মেইন User অ্যাকাউন্টও Soft Delete
             await tx.user.update({
                 where: { id: expert.userId },
                 data: {
                     isDeleted: true,
                     deletedAt: new Date(),
-                    status: "DELETED", // UserStatus enum অনুযায়ী
+                    status: "DELETED",
                 },
             });
             return updatedExpert;
         });
     }
-
-    // ৩. পারমিশন না থাকলে এরর থ্রো করবে
     throw new Error("You do not have permission to delete this expert");
 };
 

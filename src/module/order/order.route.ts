@@ -19,6 +19,12 @@ router.post(
 );
 
 router.get(
+    "/",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    orderController.getAllOrders
+);
+
+router.get(
     "/my-orders",
     auth(Role.BUYER),
     orderController.getMyOrders

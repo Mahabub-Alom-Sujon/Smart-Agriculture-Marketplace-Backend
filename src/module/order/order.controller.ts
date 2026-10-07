@@ -5,6 +5,7 @@ import { sendResponse } from '../../utils/send-response'
 import { orderService } from "./order.service";
 import {IRequestUser} from "../auth/auth.interface";
 import {OrderStatus} from "../../../generated/prisma/enums";
+import {ExpertService} from "../expert/expert.service";
 
 const createOrder = catchAsync(async (req: Request, res: Response) => {
     //const user = req.user as { userId: string; role: string };
@@ -22,13 +23,27 @@ const createOrder = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getAllOrders = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await orderService.getAllOrders(
+            req.query
+        );
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Orders retrieved successfully",
+            meta: result.meta,
+            data: result.data,
+        });
+    }
+);
+
 const getMyOrders = catchAsync(async (req: Request, res: Response) => {
     // const user = req.user as { userId: string; role: string };
     const user = req.user as IRequestUser;
     const result = await orderService.getMyOrders(
         user.userId,
     );
-
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
@@ -36,7 +51,6 @@ const getMyOrders = catchAsync(async (req: Request, res: Response) => {
         data: result,
     });
 });
-
 const getOrderById = catchAsync(async (req: Request, res: Response) => {
     const user = req.user as IRequestUser;
     const result = await orderService.getOrderById(
@@ -75,6 +89,7 @@ const updateOrderStatus = catchAsync(async (req: Request, res: Response) => {
 
 export const orderController = {
     createOrder,
+    getAllOrders,
     getMyOrders,
     getOrderById,
     updateOrderStatus

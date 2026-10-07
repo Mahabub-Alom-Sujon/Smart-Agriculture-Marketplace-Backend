@@ -10,7 +10,6 @@ const registerExpert = catchAsync(
         const result = await ExpertService.registerExpert(
             req.body
         );
-
         sendResponse(res, {
             statusCode: 201,
             success: true,
@@ -29,7 +28,6 @@ const getAllPublicExperts = catchAsync(
         const result = await ExpertService.getAllPublicExperts(
             req.query
         );
-
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -68,7 +66,6 @@ const getAllExperts = catchAsync(
         const result = await ExpertService.getAllExperts(
             req.query
         );
-
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -85,11 +82,9 @@ const getAllExperts = catchAsync(
 const getSingleExpert = catchAsync(
     async (req: Request, res: Response) => {
         const { id } = req.params;
-
         const result = await ExpertService.getSingleExpert(
             id as string
         );
-
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -111,7 +106,6 @@ const deleteExpert = catchAsync(
             user.userId,
             user.role
         );
-
         sendResponse(res, {
             statusCode: httpStatus.OK,
             success: true,

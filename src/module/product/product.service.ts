@@ -1,7 +1,7 @@
 import {prisma} from "../../lib/prisma";
 import { CreateProduct, UpdateProduct } from './product.interface';
 import {IProductQuery} from "./product.interface";
-import { ProductStatus } from '../../../generated/prisma/enums';
+import {ProductStatus, Role} from '../../../generated/prisma/enums';
 
 const createProduct = async (payload: CreateProduct) => {
     const { categoryId, farmerId } = payload;
@@ -148,7 +148,6 @@ const getAllProducts = async (query:IProductQuery)=>{
             where.price.lte = Number(maxPrice);
         }
     }
-
     const [products, total] = await Promise.all([
         prisma.product.findMany({
             where,
@@ -296,7 +295,7 @@ const updateProduct = async (id: string, payload: UpdateProduct) => {
     return result;
 };
 
-const deleteProduct = async (id: string) => {
+const deleteProduct = async (id: string, role: Role) => {
     const product = await prisma.product.findFirst({
         where: {
             id,
@@ -308,18 +307,29 @@ const deleteProduct = async (id: string) => {
         throw new Error('Product not found');
     }
 
-    const result = await prisma.product.update({
-        where: {
-            id,
-        },
-        data: {
-            isDeleted: true,
-            deletedAt: new Date(),
-            status: ProductStatus.INACTIVE,
-        },
-    });
+    if (role === Role.ADMIN) {
+        const result = await prisma.category.update({
+            where: {
+                id,
+            },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+                status: ProductStatus.INACTIVE,
+            },
+        });
+        return result;
+    }
 
-    return result;
+    if (role === Role.SUPER_ADMIN) {
+        const result = await prisma.category.delete({
+            where: {
+                id,
+            },
+        });
+        return result;
+    }
+
 };
 
 const getMyProducts = async (userId: string) => {

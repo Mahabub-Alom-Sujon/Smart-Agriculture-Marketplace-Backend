@@ -35,12 +35,25 @@ const getAllFarms = catchAsync(
     },
 );
 
+const getAllAdminFarms = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await FarmService.getAllAdminFarms(
+            req.query
+        );
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Farms retrieved successfully",
+            data: result,
+        });
+    },
+);
+
+
 const getFarmById = catchAsync(
     async (req: Request, res: Response) => {
         const  id  = req.params.id as string;
-
         const result = await FarmService.getFarmById(id);
-
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -53,10 +66,7 @@ const getFarmById = catchAsync(
 const getFarmsByFarmer = catchAsync(
     async (req: Request, res: Response) => {
         const { farmerId } = req.params;
-
-        const result =
-            await FarmService.getFarmsByFarmer(farmerId as string );
-
+        const result = await FarmService.getFarmsByFarmer(farmerId as string );
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -70,13 +80,11 @@ const updateFarm = catchAsync(
     async (req: Request, res: Response) => {
         const  id  = req.params.id as string;
         const user = req.user as { userId: string; role: string };
-
         const result = await FarmService.updateFarm(
             id,
             user.userId,
             req.body,
         );
-
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -94,7 +102,27 @@ const deleteFarm = catchAsync(
             id,
             user.userId,
         );
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Farm deleted successfully",
+            data: result,
+        });
+    },
+);
 
+const deleteAdminFarm = catchAsync(
+    async (req: Request, res: Response) => {
+        const  id  = req.params.id as string;
+        //const user = req.user as { userId: string; role: string };
+        const role = req.user?.role;
+        if (!role) {
+            throw new Error("Unauthorized");
+        }
+        const result = await FarmService.deleteAdminFarm(
+            id,
+            role,
+        );
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -108,8 +136,10 @@ const deleteFarm = catchAsync(
 export const FarmController = {
     createFarm,
     getAllFarms,
+    getAllAdminFarms,
     getFarmById,
     getFarmsByFarmer,
     updateFarm,
     deleteFarm,
+    deleteAdminFarm
 };

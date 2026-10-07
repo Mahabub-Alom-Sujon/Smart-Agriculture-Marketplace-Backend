@@ -8,3 +8,11 @@ export interface ICreateOrder {
     deliveryAddress: string;
     items: ICreateOrderItem[];
 }
+
+export interface IOrderQuery {
+    page?: string;
+    limit?: string;
+    searchTerm?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}

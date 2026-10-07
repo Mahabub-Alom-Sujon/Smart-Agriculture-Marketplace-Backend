@@ -1,3 +1,5 @@
+import {IExpertQuery} from "../expert/expert.interface";
+
 export interface ICreateFarm {
     farmName: string;
     location: string;
@@ -18,4 +20,12 @@ export interface IFarmParams {
 
 export interface IFarmerParams {
     farmerId: string;
+}
+
+export interface IFarmQuery {
+    searchTerm?: string;
+    page?: string;
+    limit?: string;
+    sortBy?: string;
+    sortOrder?: string;
 }
