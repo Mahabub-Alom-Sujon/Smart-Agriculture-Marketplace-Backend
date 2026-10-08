@@ -13,6 +13,13 @@ const router = Router();
 
 router.get('/', productController.getAllProducts);
 
+// Admin
+
+router.get('/admin',
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    productController.getAllAdminProducts
+);
+
 
 router.get(
     '/category/:categoryId',
@@ -35,12 +42,13 @@ router.post(
     productController.createProduct
 );
 
+
+
 router.get(
     '/farmer/my-products',
     auth(Role.FARMER),
     productController.getMyProducts
 );
-
 
 router.patch(
     '/:id',
@@ -57,6 +65,8 @@ router.delete(
 
 
 // Admin
+
+
 router.patch(
     '/:id/status',
     auth(Role.ADMIN, Role.SUPER_ADMIN),

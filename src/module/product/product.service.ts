@@ -1,7 +1,8 @@
-import {prisma} from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { CreateProduct, UpdateProduct } from './product.interface';
-import {IProductQuery} from "./product.interface";
-import {ProductStatus, Role} from '../../../generated/prisma/enums';
+import { IProductQuery } from "./product.interface";
+import { ProductStatus, Role } from '../../../generated/prisma/enums';
+import { ProductWhereInput } from "../../../generated/prisma/models/Product";
 
 const createProduct = async (payload: CreateProduct) => {
     const { categoryId, farmerId } = payload;
@@ -173,6 +174,98 @@ const getAllProducts = async (query:IProductQuery)=>{
         }),
     ]);
 
+    return {
+        meta: {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPage: Math.ceil(total / limitNumber),
+        },
+        data: products,
+    };
+
+}
+
+const getAllAdminProducts = async (query:IProductQuery)=>{
+    const {
+        searchTerm,
+        page = '1',
+        limit = '10',
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+    } = query;
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const andConditions: ProductWhereInput[] = [
+        {
+            isDeleted: false,
+        },
+    ];
+
+    if (searchTerm){
+        andConditions.push({
+            OR: [
+                {
+                    name: {
+                        contains: searchTerm,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    description: {
+                        contains: searchTerm,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    category: {
+                        name: {
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        },
+                    },
+                },
+                {
+                    farmer :{
+                        name:{
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        }
+                    }
+                }
+            ]
+        })
+    }
+
+    const whereConditions: ProductWhereInput = {
+        AND: andConditions,
+    };
+
+    const [products, total] = await Promise.all([
+        prisma.product.findMany({
+            where: whereConditions,
+            skip,
+            take: limitNumber,
+            orderBy: {
+                [sortBy]: sortOrder,
+            },
+            include: {
+                category: true,
+                farmer: true,
+                _count: {
+                    select: {
+                        reviews: true,
+                        orderItems: true,
+                    },
+                },
+            },
+        }),
+        prisma.product.count({
+            where: whereConditions,
+        }),
+    ]);
     return {
         meta: {
             page: pageNumber,
@@ -436,6 +529,7 @@ const updateProductStatus = async (
 export const productService = {
     createProduct,
     getAllProducts,
+    getAllAdminProducts,
     getSingleProduct,
     updateProduct,
     deleteProduct,

@@ -33,6 +33,19 @@ const getAllProducts = catchAsync(
     }
 );
 
+const getAllAdminProducts = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await productService.getAllAdminProducts( req.query);
+        sendResponse(res, {
+            success: true,
+            statusCode : httpStatus.OK,
+            message: 'Products retrieved successfully',
+            meta: result.meta,
+            data: result.data,
+        });
+    }
+);
+
 
 const getSingleProduct = catchAsync(
     async (req: Request, res: Response) => {
@@ -140,6 +153,7 @@ const updateProductStatus = catchAsync(
 export const productController ={
     createProduct,
     getAllProducts,
+    getAllAdminProducts,
     getSingleProduct,
     updateProduct,
     deleteProduct,

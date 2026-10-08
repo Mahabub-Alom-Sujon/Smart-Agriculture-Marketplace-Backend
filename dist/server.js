@@ -1622,6 +1622,92 @@ var getAllProducts = async (query) => {
     data: products
   };
 };
+var getAllAdminProducts = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
+      isDeleted: false
+    }
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          description: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          category: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          farmer: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder
+      },
+      include: {
+        category: true,
+        farmer: true,
+        _count: {
+          select: {
+            reviews: true,
+            orderItems: true
+          }
+        }
+      }
+    }),
+    prisma.product.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: products
+  };
+};
 var getSingleProduct = async (id) => {
   const result = await prisma.product.findUnique({
     where: {
@@ -1843,6 +1929,7 @@ var updateProductStatus = async (id, status) => {
 var productService = {
   createProduct,
   getAllProducts,
+  getAllAdminProducts,
   getSingleProduct,
   updateProduct,
   deleteProduct,
@@ -1868,6 +1955,18 @@ var createProduct2 = catchAsync(
 var getAllProducts2 = catchAsync(
   async (req, res) => {
     const result = await productService.getAllProducts(req.query);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus5.OK,
+      message: "Products retrieved successfully",
+      meta: result.meta,
+      data: result.data
+    });
+  }
+);
+var getAllAdminProducts2 = catchAsync(
+  async (req, res) => {
+    const result = await productService.getAllAdminProducts(req.query);
     sendResponse(res, {
       success: true,
       statusCode: httpStatus5.OK,
@@ -1968,6 +2067,7 @@ var updateProductStatus2 = catchAsync(
 var productController = {
   createProduct: createProduct2,
   getAllProducts: getAllProducts2,
+  getAllAdminProducts: getAllAdminProducts2,
   getSingleProduct: getSingleProduct2,
   updateProduct: updateProduct2,
   deleteProduct: deleteProduct2,
@@ -2024,6 +2124,11 @@ var productValidation = {
 // src/module/product/product.route.ts
 var router3 = Router3();
 router3.get("/", productController.getAllProducts);
+router3.get(
+  "/admin",
+  auth(Role.ADMIN, Role.SUPER_ADMIN),
+  productController.getAllAdminProducts
+);
 router3.get(
   "/category/:categoryId",
   productController.getProductsByCategory
