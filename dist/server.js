@@ -1853,7 +1853,7 @@ var deleteProduct = async (id, role) => {
     throw new Error("Product not found");
   }
   if (role === Role.ADMIN) {
-    const result = await prisma.category.update({
+    const result = await prisma.product.update({
       where: {
         id
       },
@@ -1866,7 +1866,7 @@ var deleteProduct = async (id, role) => {
     return result;
   }
   if (role === Role.SUPER_ADMIN) {
-    const result = await prisma.category.delete({
+    const result = await prisma.product.delete({
       where: {
         id
       }

@@ -1,7 +1,6 @@
 import {prisma} from "../../lib/prisma";
 import {IFarmerQuery} from "./farmer.interface";
 import { FarmerWhereInput } from "../../../generated/prisma/models/Farmer";
-import {ExpertWhereInput} from "../../../generated/prisma/models/Expert";
 import {Role} from "../../../generated/prisma/enums";
 
 const getAllFarmers =async()=>{

@@ -401,7 +401,7 @@ const deleteProduct = async (id: string, role: Role) => {
     }
 
     if (role === Role.ADMIN) {
-        const result = await prisma.category.update({
+        const result = await prisma.product.update({
             where: {
                 id,
             },
@@ -415,7 +415,7 @@ const deleteProduct = async (id: string, role: Role) => {
     }
 
     if (role === Role.SUPER_ADMIN) {
-        const result = await prisma.category.delete({
+        const result = await prisma.product.delete({
             where: {
                 id,
             },
