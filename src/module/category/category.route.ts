@@ -17,6 +17,12 @@ router.get(
     categoryController.getAllCategories,
 );
 
+router.get(
+    "/admin",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    categoryController.getAllAdminCategories,
+);
+
 // Get Single Category
 router.get(
     "/:id",

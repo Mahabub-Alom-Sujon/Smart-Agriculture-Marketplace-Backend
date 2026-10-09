@@ -1187,6 +1187,23 @@ var createCategory = async (payload) => {
     data: payload
   });
 };
+var getAllAdminCategories = async () => {
+  const result = await prisma.category.findMany({
+    where: {
+      isDeleted: false
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      isDeleted: true,
+      deletedAt: true,
+      createdAt: true,
+      updatedAt: true
+    }
+  });
+  return result;
+};
 var getAllCategories = async (query) => {
   const {
     searchTerm,
@@ -1313,6 +1330,7 @@ var deleteCategory = async (id, role) => {
 var categoryServices = {
   createCategory,
   getAllCategories,
+  getAllAdminCategories,
   getSingleCategory,
   updateCategory,
   deleteCategory
@@ -1328,12 +1346,23 @@ var createCategory2 = catchAsync(async (req, res) => {
     data: result
   });
 });
+var getAllAdminCategories2 = catchAsync(
+  async (req, res) => {
+    const result = await categoryServices.getAllAdminCategories();
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus4.OK,
+      message: "Categories retrieved successfully",
+      data: result
+    });
+  }
+);
 var getAllCategories2 = catchAsync(
   async (req, res) => {
     const result = await categoryServices.getAllCategories(req.query);
     sendResponse(res, {
       success: true,
-      statusCode: httpStatus4.CREATED,
+      statusCode: httpStatus4.OK,
       message: "Categories retrieved successfully",
       data: result
     });
@@ -1383,6 +1412,7 @@ var deleteCategory2 = catchAsync(async (req, res) => {
 var categoryController = {
   createCategory: createCategory2,
   getAllCategories: getAllCategories2,
+  getAllAdminCategories: getAllAdminCategories2,
   getSingleCategory: getSingleCategory2,
   updateCategory: updateCategory2,
   deleteCategory: deleteCategory2
@@ -1424,6 +1454,11 @@ var router2 = Router2();
 router2.get(
   "/",
   categoryController.getAllCategories
+);
+router2.get(
+  "/admin",
+  auth(Role.ADMIN, Role.SUPER_ADMIN),
+  categoryController.getAllAdminCategories
 );
 router2.get(
   "/:id",

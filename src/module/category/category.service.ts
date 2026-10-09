@@ -8,6 +8,25 @@ const createCategory = async (payload: CreateCategory) => {
     });
 };
 
+const getAllAdminCategories = async ()=>{
+    const result = await prisma.category.findMany({
+        where: {
+            isDeleted: false,
+        },
+        select:{
+            id:true,
+            name:true,
+            description:true,
+            isDeleted:true,
+            deletedAt:true,
+            createdAt:true,
+            updatedAt:true,
+
+        }
+    })
+    return result;
+}
+
 const getAllCategories = async (query:IQuery) => {
     const {
         searchTerm,
@@ -171,6 +190,7 @@ const deleteCategory = async ( id: string, role: Role ) => {
 export const categoryServices ={
     createCategory,
     getAllCategories,
+    getAllAdminCategories,
     getSingleCategory,
     updateCategory,
     deleteCategory
