@@ -32,7 +32,6 @@ const createFarm = async (
 
     return farm;
 };
-
 const getAllFarms = async () => {
     const farms = await prisma.farm.findMany({
         where: {

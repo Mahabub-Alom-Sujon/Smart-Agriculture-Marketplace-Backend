@@ -6118,9 +6118,13 @@ var getAllFarmers = async () => {
     where: {
       isDeleted: false
     },
-    include: {
-      farms: true
-      //crops: true,
+    select: {
+      id: true,
+      name: true,
+      isDeleted: true,
+      deletedAt: true,
+      createdAt: true,
+      updatedAt: true
     },
     orderBy: {
       createdAt: "desc"
