@@ -16,3 +16,11 @@ export interface UpdateCropPayload {
     status?: CropStatus;
     farmId?: string;
 }
+
+export interface ICropQuery {
+    searchTerm?: string;
+    page?: string;
+    limit?: string;
+    sortBy?: string;
+    sortOrder?: string;
+}

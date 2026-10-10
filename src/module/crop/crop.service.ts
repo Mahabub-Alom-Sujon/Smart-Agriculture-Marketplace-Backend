@@ -1,6 +1,8 @@
 import {prisma} from "../../lib/prisma";
-import {CreateCropPayload, UpdateCropPayload} from "./crop.interface";
+import {CreateCropPayload, ICropQuery, UpdateCropPayload} from "./crop.interface";
 import {CropStatus} from "../../../generated/prisma/enums";
+import {CropWhereInput} from "../../../generated/prisma/models/Crop";
+import {FarmWhereInput} from "../../../generated/prisma/models/Farm";
 
 const createCrop = async (
     userId: string,
@@ -53,18 +55,99 @@ const createCrop = async (
     return crop;
 };
 
-const getAllCrops = async () => {
-    return prisma.crop.findMany({
-        where: {
+const getAllCrops = async ( query:ICropQuery) => {
+    const {
+        searchTerm,
+        page = "1",
+        limit = "10",
+        sortBy = "createdAt",
+        sortOrder = "desc",
+    } = query;
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const andConditions: CropWhereInput[] = [
+        {
             isDeleted: false,
         },
-        include: {
-            farm: true,
+    ];
+    if (searchTerm) {
+        andConditions.push({
+            OR:[
+                {
+                    name:{
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    }
+                },
+                {
+                    variety : {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    }
+                },
+                {
+                    farm: {
+                        farmName:{
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        }
+                    }
+                },
+                {
+                    farm: {
+                        location: {
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        }
+                    }
+                }
+            ]
+        })
+    }
+
+    const whereConditions: CropWhereInput = {
+        AND: andConditions,
+    };
+
+    const [result, total] = await Promise.all([
+        prisma.crop.findMany({
+            where: whereConditions,
+            skip,
+            take: limitNumber,
+            orderBy: {
+                [sortBy]: sortOrder === "asc" ? "asc" : "desc",
+            },
+            include: {
+                farm: true
+            },
+        }),
+
+        prisma.crop.count({
+            where: whereConditions,
+        }),
+    ]);
+
+    return {
+        meta: {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPage: Math.ceil(total / limitNumber),
         },
-        orderBy: {
-            createdAt: "desc",
-        },
-    });
+        data: result,
+    };
+    // return prisma.crop.findMany({
+    //     where: {
+    //         isDeleted: false,
+    //     },
+    //     include: {
+    //         farm: true,
+    //     },
+    //     orderBy: {
+    //         createdAt: "desc",
+    //     },
+    // });
 };
 
 const getCropsByFarm = async (farmId: string) => {

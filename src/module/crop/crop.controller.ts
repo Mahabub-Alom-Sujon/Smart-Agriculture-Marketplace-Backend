@@ -25,13 +25,13 @@ const createCrop = catchAsync(
 
 const getAllCrops = catchAsync(
     async ( req: Request, res: Response) => {
-        const result = await CropService.getAllCrops();
-
+        const result = await CropService.getAllCrops(req.query);
         sendResponse(res, {
             statusCode: 200,
             success: true,
             message: "Crops retrieved successfully",
-            data: result,
+            meta: result.meta,
+            data: result.data,
         });
     }
 );

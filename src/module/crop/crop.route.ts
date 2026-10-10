@@ -19,11 +19,6 @@ const router = Router();
 // ========================
 
 router.get(
-    "/",
-    CropController.getAllCrops
-);
-
-router.get(
     "/farm/:farmId",
     //validateRequest(cropsByFarmValidation),
     CropController.getCropsByFarm
@@ -44,6 +39,12 @@ router.post(
     auth(Role.FARMER),
     validateRequest(createCropValidation),
     CropController.createCrop
+);
+
+router.get(
+    "/",
+    auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
+    CropController.getAllCrops
 );
 
 router.patch(

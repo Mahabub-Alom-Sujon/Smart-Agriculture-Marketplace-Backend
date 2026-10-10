@@ -2641,20 +2641,79 @@ var createFarm = async (userId, payload) => {
   });
   return farm;
 };
-var getAllFarms = async () => {
-  const farms = await prisma.farm.findMany({
-    where: {
+var getAllFarms = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
       isDeleted: false
-    },
-    include: {
-      farmer: true,
-      crops: true
-    },
-    orderBy: {
-      createdAt: "desc"
     }
-  });
-  return farms;
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          farmName: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          location: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          soilType: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          farmer: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [result, total] = await Promise.all([
+    prisma.farm.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      }
+    }),
+    prisma.farm.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
 };
 var getAllAdminFarms = async (query) => {
   const {
@@ -2885,12 +2944,13 @@ var createFarm2 = catchAsync(
 );
 var getAllFarms2 = catchAsync(
   async (req, res) => {
-    const result = await FarmService.getAllFarms();
+    const result = await FarmService.getAllFarms(req.query);
     sendResponse(res, {
       statusCode: 200,
       success: true,
       message: "Farms retrieved successfully",
-      data: result
+      meta: result.meta,
+      data: result.data
     });
   }
 );
@@ -3030,6 +3090,7 @@ var farmerIdValidation = z5.object({
 var router5 = Router5();
 router5.get(
   "/",
+  auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
   FarmController.getAllFarms
 );
 router5.get(
@@ -3109,18 +3170,84 @@ var createCrop = async (userId, payload) => {
   });
   return crop;
 };
-var getAllCrops = async () => {
-  return prisma.crop.findMany({
-    where: {
+var getAllCrops = async (query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const andConditions = [
+    {
       isDeleted: false
-    },
-    include: {
-      farm: true
-    },
-    orderBy: {
-      createdAt: "desc"
     }
-  });
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          variety: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          farm: {
+            farmName: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          farm: {
+            location: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [result, total] = await Promise.all([
+    prisma.crop.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder === "asc" ? "asc" : "desc"
+      },
+      include: {
+        farm: true
+      }
+    }),
+    prisma.crop.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: result
+  };
 };
 var getCropsByFarm = async (farmId) => {
   const farm = await prisma.farm.findFirst({
@@ -3315,12 +3442,13 @@ var createCrop2 = catchAsync(
 );
 var getAllCrops2 = catchAsync(
   async (req, res) => {
-    const result = await CropService.getAllCrops();
+    const result = await CropService.getAllCrops(req.query);
     sendResponse(res, {
       statusCode: 200,
       success: true,
       message: "Crops retrieved successfully",
-      data: result
+      meta: result.meta,
+      data: result.data
     });
   }
 );
@@ -3454,10 +3582,6 @@ var cropsByFarmValidation = z6.object({
 // src/module/crop/crop.route.ts
 var router6 = Router6();
 router6.get(
-  "/",
-  CropController.getAllCrops
-);
-router6.get(
   "/farm/:farmId",
   //validateRequest(cropsByFarmValidation),
   CropController.getCropsByFarm
@@ -3472,6 +3596,11 @@ router6.post(
   auth(Role.FARMER),
   validateRequest(createCropValidation),
   CropController.createCrop
+);
+router6.get(
+  "/",
+  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
+  CropController.getAllCrops
 );
 router6.patch(
   "/:id",
@@ -3803,7 +3932,7 @@ router7.post(
 );
 router7.get(
   "/",
-  auth(Role.ADMIN, Role.SUPER_ADMIN),
+  auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
   orderController.getAllOrders
 );
 router7.get(

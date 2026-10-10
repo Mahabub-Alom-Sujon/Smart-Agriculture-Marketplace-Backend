@@ -20,7 +20,7 @@ router.post(
 
 router.get(
     "/",
-    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
     orderController.getAllOrders
 );
 

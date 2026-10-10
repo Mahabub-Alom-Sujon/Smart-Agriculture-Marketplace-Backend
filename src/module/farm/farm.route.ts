@@ -16,15 +16,15 @@ const router = Router();
 // Public Routes
 // ==============================
 
-router.get(
-    "/",
-    FarmController.getAllFarms,
-);
-
-
 // ==============================
 // Admin Routes
 // ==============================
+
+router.get(
+    "/",
+    auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
+    FarmController.getAllFarms,
+);
 
 router.get(
     "/admin",

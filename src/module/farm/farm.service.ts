@@ -32,21 +32,81 @@ const createFarm = async (
 
     return farm;
 };
-const getAllFarms = async () => {
-    const farms = await prisma.farm.findMany({
-        where: {
+const getAllFarms = async (query:IFarmQuery) => {
+    const {
+        searchTerm,
+        page = "1",
+        limit = "10",
+        sortBy = "createdAt",
+        sortOrder = "desc",
+    } = query;
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const andConditions: FarmWhereInput[] = [
+        {
             isDeleted: false,
         },
-        include: {
-            farmer: true,
-            crops: true,
-        },
-        orderBy: {
-            createdAt: "desc",
-        },
-    });
+    ];
+    if (searchTerm) {
+        andConditions.push({
+            OR: [
+                {
+                    farmName: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    location :{
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    }
+                },
+                {
+                    soilType:{
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    }
+                },
+                {
+                    farmer:{
+                        name:{
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        }
+                    }
+                }
+            ],
+        });
+    }
+    const whereConditions: FarmWhereInput = {
+        AND: andConditions,
+    };
 
-    return farms;
+    const [result, total] = await Promise.all([
+        prisma.farm.findMany({
+            where: whereConditions,
+            skip,
+            take: limitNumber,
+            orderBy: {
+                [sortBy]: sortOrder === "asc" ? "asc" : "desc",
+            },
+        }),
+        prisma.farm.count({
+            where: whereConditions,
+        }),
+    ]);
+
+    return {
+        meta: {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPage: Math.ceil(total / limitNumber),
+        },
+        data: result,
+    };
 };
 
 const getAllAdminFarms = async ( query:IFarmQuery ) => {
