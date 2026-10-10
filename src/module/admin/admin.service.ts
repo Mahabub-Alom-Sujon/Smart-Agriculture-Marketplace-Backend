@@ -10,32 +10,69 @@ const getDashboardStats = async () => {
         totalProducts,
         totalCategories,
         totalOrders,
+        activeProducts,
+        soldOutProducts,
     ] = await Promise.all([
+        // Total users
         prisma.user.count(),
 
+        // Total farmers
         prisma.user.count({
             where: {
                 role: "FARMER",
             },
         }),
 
+        // Total buyers
         prisma.user.count({
             where: {
                 role: "BUYER",
             },
         }),
 
+        // Total experts
         prisma.user.count({
             where: {
                 role: "EXPERT",
             },
         }),
 
-        prisma.product.count(),
+        // Total products (excluding deleted)
+        prisma.product.count({
+            where: {
+                isDeleted: false,
+            },
+        }),
 
-        prisma.category.count(),
+        // Total categories (excluding deleted)
+        prisma.category.count({
+            where: {
+                isDeleted: false,
+            },
+        }),
 
-        prisma.order.count(),
+        // Total orders (excluding deleted)
+        prisma.order.count({
+            where: {
+                isDeleted: false,
+            },
+        }),
+
+        // Active products
+        prisma.product.count({
+            where: {
+                isDeleted: false,
+                status: "ACTIVE",
+            },
+        }),
+
+        // Sold-out products
+        prisma.product.count({
+            where: {
+                isDeleted: false,
+                status: "SOLD_OUT",
+            },
+        }),
     ]);
 
     return {
@@ -46,6 +83,8 @@ const getDashboardStats = async () => {
         totalProducts,
         totalCategories,
         totalOrders,
+        activeProducts,
+        soldOutProducts,
     };
 };
 
