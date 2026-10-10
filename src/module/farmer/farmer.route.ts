@@ -18,7 +18,7 @@ router.get("/:id", FarmerController.getFarmerById);
 
 router.delete("/:id",
     auth(Role.SUPER_ADMIN, Role.ADMIN),
-    FarmerController.getFarmerById
+    FarmerController.deleteFarmer
 );
 
 export const FarmerRoutes = router;

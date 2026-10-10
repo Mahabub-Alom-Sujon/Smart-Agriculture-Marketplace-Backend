@@ -71,7 +71,7 @@ router.delete(
 router.delete(
     "/admin/:id",
     auth(Role.ADMIN, Role.SUPER_ADMIN),
-    FarmController.deleteFarm,
+    FarmController.deleteAdminFarm,
 );
 
 

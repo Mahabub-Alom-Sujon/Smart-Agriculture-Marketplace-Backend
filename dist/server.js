@@ -3028,7 +3028,7 @@ router5.delete(
 router5.delete(
   "/admin/:id",
   auth(Role.ADMIN, Role.SUPER_ADMIN),
-  FarmController.deleteFarm
+  FarmController.deleteAdminFarm
 );
 var FarmRoutes = router5;
 
@@ -6355,7 +6355,7 @@ router14.get("/:id", FarmerController.getFarmerById);
 router14.delete(
   "/:id",
   auth(Role.SUPER_ADMIN, Role.ADMIN),
-  FarmerController.getFarmerById
+  FarmerController.deleteFarmer
 );
 var FarmerRoutes = router14;
 
