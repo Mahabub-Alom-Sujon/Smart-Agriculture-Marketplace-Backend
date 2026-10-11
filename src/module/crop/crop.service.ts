@@ -1,6 +1,6 @@
 import {prisma} from "../../lib/prisma";
 import {CreateCropPayload, ICropQuery, UpdateCropPayload} from "./crop.interface";
-import {CropStatus} from "../../../generated/prisma/enums";
+import {CropStatus, Role} from "../../../generated/prisma/enums";
 import {CropWhereInput} from "../../../generated/prisma/models/Crop";
 import {FarmWhereInput} from "../../../generated/prisma/models/Farm";
 
@@ -54,8 +54,10 @@ const createCrop = async (
 
     return crop;
 };
-
-const getAllCrops = async ( query:ICropQuery) => {
+const getAllCrops = async (
+    query: ICropQuery,
+    userId: string,
+) => {
     const {
         searchTerm,
         page = "1",
@@ -63,47 +65,69 @@ const getAllCrops = async ( query:ICropQuery) => {
         sortBy = "createdAt",
         sortOrder = "desc",
     } = query;
-    const pageNumber = Number(page);
-    const limitNumber = Number(limit);
+
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const limitNumber = Math.max(1, Number(limit) || 10);
     const skip = (pageNumber - 1) * limitNumber;
+
+    // Find logged-in farmer
+    const farmer = await prisma.farmer.findUnique({
+        where: {
+            userId,
+        },
+        select: {
+            id: true,
+        },
+    });
+
+    if (!farmer) {
+        throw new Error("Farmer profile not found");
+    }
+
+    // Ownership filter: only crops belonging to this farmer's farms
     const andConditions: CropWhereInput[] = [
         {
             isDeleted: false,
+            farm: {
+                farmerId: farmer.id,
+                isDeleted: false,
+            },
         },
     ];
+
     if (searchTerm) {
         andConditions.push({
-            OR:[
+            OR: [
                 {
-                    name:{
+                    name: {
                         contains: searchTerm,
                         mode: "insensitive",
-                    }
+                    },
                 },
                 {
-                    variety : {
+                    variety: {
                         contains: searchTerm,
                         mode: "insensitive",
-                    }
+                    },
                 },
                 {
                     farm: {
-                        farmName:{
+                        farmName: {
                             contains: searchTerm,
                             mode: "insensitive",
-                        }
-                    }
+                        },
+                    },
                 },
                 {
                     farm: {
                         location: {
                             contains: searchTerm,
                             mode: "insensitive",
-                        }
-                    }
-                }
-            ]
-        })
+                        },
+                    },
+                },
+            ],
+        });
     }
 
     const whereConditions: CropWhereInput = {
@@ -119,7 +143,7 @@ const getAllCrops = async ( query:ICropQuery) => {
                 [sortBy]: sortOrder === "asc" ? "asc" : "desc",
             },
             include: {
-                farm: true
+                farm: true,
             },
         }),
 
@@ -137,17 +161,6 @@ const getAllCrops = async ( query:ICropQuery) => {
         },
         data: result,
     };
-    // return prisma.crop.findMany({
-    //     where: {
-    //         isDeleted: false,
-    //     },
-    //     include: {
-    //         farm: true,
-    //     },
-    //     orderBy: {
-    //         createdAt: "desc",
-    //     },
-    // });
 };
 
 const getCropsByFarm = async (farmId: string) => {
@@ -251,18 +264,8 @@ const updateCrop = async (
         data: {
             name: payload.name,
             variety: payload.variety,
-            plantingDate:
-                payload.plantingDate !== undefined
-                    ? payload.plantingDate
-                        ? new Date(payload.plantingDate)
-                        : null
-                    : undefined,
-            harvestDate:
-                payload.harvestDate !== undefined
-                    ? payload.harvestDate
-                        ? new Date(payload.harvestDate)
-                        : null
-                    : undefined,
+            plantingDate: payload.plantingDate !== undefined ? payload.plantingDate ? new Date(payload.plantingDate) : null : undefined,
+            harvestDate: payload.harvestDate !== undefined ? payload.harvestDate ? new Date(payload.harvestDate) : null : undefined,
             status: payload.status,
             farmId: payload.farmId,
         },
@@ -352,12 +355,6 @@ const deleteCrop = async (
         throw new Error("You are not authorized to delete this crop");
     }
 
-    // await prisma.crop.delete({
-    //     where: {
-    //         id,
-    //     },
-    // });
-
     await prisma.crop.update({
         where: {
             id,
@@ -371,6 +368,58 @@ const deleteCrop = async (
     return null;
 };
 
+const deleteAdminCrop = async ( id: string, role: Role )=>{
+    // Check Farm exists
+    const farm = await prisma.crop.findUnique({
+        where: {
+            id,
+            isDeleted: false,
+        },
+    });
+
+    if (!farm) {
+        throw new Error("Crop not found");
+    }
+
+    // =========================
+    // ADMIN → Soft Delete
+    // =========================
+
+    if (role === Role.ADMIN) {
+        const result = await prisma.crop.update({
+            where: {
+                id,
+            },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+            },
+        });
+
+        return result;
+    }
+
+    // =========================
+    // SUPER_ADMIN → Permanent Delete
+    // =========================
+
+    if (role === Role.SUPER_ADMIN) {
+        const result = await prisma.crop.delete({
+            where: {
+                id,
+            },
+        });
+
+        return result;
+    }
+
+    // =========================
+    // Other Roles → Not Allowed
+    // =========================
+    throw new Error("You are not authorized to delete this category");
+
+}
+
 export const CropService = {
     createCrop,
     getAllCrops,
@@ -379,4 +428,5 @@ export const CropService = {
     updateCrop,
     updateCropStatus,
     deleteCrop,
+    deleteAdminCrop
 };

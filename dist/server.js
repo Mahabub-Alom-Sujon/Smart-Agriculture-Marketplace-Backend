@@ -2641,7 +2641,7 @@ var createFarm = async (userId, payload) => {
   });
   return farm;
 };
-var getAllFarms = async (query) => {
+var getAllFarms = async (query, userId) => {
   const {
     searchTerm,
     page = "1",
@@ -2649,12 +2649,24 @@ var getAllFarms = async (query) => {
     sortBy = "createdAt",
     sortOrder = "desc"
   } = query;
-  const pageNumber = Number(page);
-  const limitNumber = Number(limit);
+  const pageNumber = Math.max(1, Number(page) || 1);
+  const limitNumber = Math.max(1, Number(limit) || 10);
   const skip = (pageNumber - 1) * limitNumber;
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId
+    },
+    select: {
+      id: true
+    }
+  });
+  if (!farmer) {
+    throw new Error("Farmer profile not found");
+  }
   const andConditions = [
     {
-      isDeleted: false
+      isDeleted: false,
+      farmerId: farmer.id
     }
   ];
   if (searchTerm) {
@@ -2849,7 +2861,12 @@ var updateFarm = async (id, farmerId, payload) => {
   if (!farm) {
     throw new Error("Farm not found");
   }
-  if (farm.farmerId !== farmerId) {
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId: farmerId
+    }
+  });
+  if (!farmer || farm.farmerId !== farmer.id) {
     throw new Error(
       "You are not authorized to update this farm"
     );
@@ -2865,20 +2882,30 @@ var updateFarm = async (id, farmerId, payload) => {
 var deleteFarm = async (id, farmerId) => {
   const farm = await prisma.farm.findFirst({
     where: {
-      id
+      id,
+      isDeleted: false
     }
   });
   if (!farm) {
     throw new Error("Farm not found");
   }
-  if (farm.farmerId !== farmerId) {
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId: farmerId
+    }
+  });
+  if (!farmer || farm.farmerId !== farmer.id) {
     throw new Error(
-      "You are not authorized to delete this farm"
+      "You are not authorized to update this farm"
     );
   }
-  const deletedFarm = await prisma.farm.delete({
+  const deletedFarm = await prisma.farm.update({
     where: {
       id
+    },
+    data: {
+      isDeleted: true,
+      deletedAt: /* @__PURE__ */ new Date()
     }
   });
   return deletedFarm;
@@ -2944,7 +2971,11 @@ var createFarm2 = catchAsync(
 );
 var getAllFarms2 = catchAsync(
   async (req, res) => {
-    const result = await FarmService.getAllFarms(req.query);
+    const user = req.user;
+    const result = await FarmService.getAllFarms(
+      req.query,
+      user.userId
+    );
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -3170,7 +3201,7 @@ var createCrop = async (userId, payload) => {
   });
   return crop;
 };
-var getAllCrops = async (query) => {
+var getAllCrops = async (query, userId) => {
   const {
     searchTerm,
     page = "1",
@@ -3178,12 +3209,27 @@ var getAllCrops = async (query) => {
     sortBy = "createdAt",
     sortOrder = "desc"
   } = query;
-  const pageNumber = Number(page);
-  const limitNumber = Number(limit);
+  const pageNumber = Math.max(1, Number(page) || 1);
+  const limitNumber = Math.max(1, Number(limit) || 10);
   const skip = (pageNumber - 1) * limitNumber;
+  const farmer = await prisma.farmer.findUnique({
+    where: {
+      userId
+    },
+    select: {
+      id: true
+    }
+  });
+  if (!farmer) {
+    throw new Error("Farmer profile not found");
+  }
   const andConditions = [
     {
-      isDeleted: false
+      isDeleted: false,
+      farm: {
+        farmerId: farmer.id,
+        isDeleted: false
+      }
     }
   ];
   if (searchTerm) {
@@ -3414,6 +3460,38 @@ var deleteCrop = async (userId, id) => {
   });
   return null;
 };
+var deleteAdminCrop = async (id, role) => {
+  const farm = await prisma.crop.findUnique({
+    where: {
+      id,
+      isDeleted: false
+    }
+  });
+  if (!farm) {
+    throw new Error("Crop not found");
+  }
+  if (role === Role.ADMIN) {
+    const result = await prisma.crop.update({
+      where: {
+        id
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return result;
+  }
+  if (role === Role.SUPER_ADMIN) {
+    const result = await prisma.crop.delete({
+      where: {
+        id
+      }
+    });
+    return result;
+  }
+  throw new Error("You are not authorized to delete this category");
+};
 var CropService = {
   createCrop,
   getAllCrops,
@@ -3421,7 +3499,8 @@ var CropService = {
   getCropById,
   updateCrop,
   updateCropStatus,
-  deleteCrop
+  deleteCrop,
+  deleteAdminCrop
 };
 
 // src/module/crop/crop.controller.ts
@@ -3442,7 +3521,11 @@ var createCrop2 = catchAsync(
 );
 var getAllCrops2 = catchAsync(
   async (req, res) => {
-    const result = await CropService.getAllCrops(req.query);
+    const user = req.user;
+    const result = await CropService.getAllCrops(
+      req.query,
+      user.userId
+    );
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -3525,6 +3608,25 @@ var deleteCrop2 = catchAsync(
     });
   }
 );
+var deleteAdminCrop2 = catchAsync(
+  async (req, res) => {
+    const id = req.params.id;
+    const role = req.user?.role;
+    if (!role) {
+      throw new Error("Unauthorized");
+    }
+    const result = await CropService.deleteAdminCrop(
+      id,
+      role
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Crop deleted successfully",
+      data: result
+    });
+  }
+);
 var CropController = {
   createCrop: createCrop2,
   getAllCrops: getAllCrops2,
@@ -3532,7 +3634,8 @@ var CropController = {
   getCropById: getCropById2,
   updateCrop: updateCrop2,
   updateCropStatus: updateCropStatus2,
-  deleteCrop: deleteCrop2
+  deleteCrop: deleteCrop2,
+  deleteAdminCrop: deleteAdminCrop2
 };
 
 // src/module/crop/crop.validation.ts
@@ -3616,7 +3719,13 @@ router6.patch(
 );
 router6.delete(
   "/:id",
-  auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
+  auth(Role.FARMER),
+  // validateRequest(cropIdValidation),
+  CropController.deleteCrop
+);
+router6.delete(
+  "/admin/:id",
+  auth(Role.SUPER_ADMIN, Role.ADMIN),
   // validateRequest(cropIdValidation),
   CropController.deleteCrop
 );

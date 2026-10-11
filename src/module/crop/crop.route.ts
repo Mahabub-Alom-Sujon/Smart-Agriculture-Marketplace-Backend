@@ -63,7 +63,14 @@ router.patch(
 
 router.delete(
     "/:id",
-    auth(Role.SUPER_ADMIN, Role.ADMIN, Role.FARMER),
+    auth(Role.FARMER),
+    // validateRequest(cropIdValidation),
+    CropController.deleteCrop
+);
+
+router.delete(
+    "/admin/:id",
+    auth(Role.SUPER_ADMIN, Role.ADMIN,),
     // validateRequest(cropIdValidation),
     CropController.deleteCrop
 );

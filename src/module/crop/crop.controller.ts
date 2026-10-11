@@ -25,7 +25,11 @@ const createCrop = catchAsync(
 
 const getAllCrops = catchAsync(
     async ( req: Request, res: Response) => {
-        const result = await CropService.getAllCrops(req.query);
+        const user = req.user as { userId: string; role: string };
+        const result = await CropService.getAllCrops(
+            req.query,
+            user.userId,
+        );
         sendResponse(res, {
             statusCode: 200,
             success: true,
@@ -122,6 +126,27 @@ const deleteCrop = catchAsync(
     }
 );
 
+const deleteAdminCrop = catchAsync(
+    async (req: Request, res: Response) => {
+        const  id  = req.params.id as string;
+        //const user = req.user as { userId: string; role: string };
+        const role = req.user?.role;
+        if (!role) {
+            throw new Error("Unauthorized");
+        }
+        const result = await CropService.deleteAdminCrop(
+            id,
+            role,
+        );
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Crop deleted successfully",
+            data: result,
+        });
+    },
+);
+
 export const CropController = {
     createCrop,
     getAllCrops,
@@ -130,4 +155,5 @@ export const CropController = {
     updateCrop,
     updateCropStatus,
     deleteCrop,
+    deleteAdminCrop
 };

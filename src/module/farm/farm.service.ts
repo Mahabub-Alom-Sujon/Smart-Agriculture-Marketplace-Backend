@@ -32,7 +32,10 @@ const createFarm = async (
 
     return farm;
 };
-const getAllFarms = async (query:IFarmQuery) => {
+const getAllFarms = async (
+    query: IFarmQuery,
+    userId: string,
+) => {
     const {
         searchTerm,
         page = "1",
@@ -40,14 +43,30 @@ const getAllFarms = async (query:IFarmQuery) => {
         sortBy = "createdAt",
         sortOrder = "desc",
     } = query;
-    const pageNumber = Number(page);
-    const limitNumber = Number(limit);
+
+    const pageNumber = Math.max(1, Number(page) || 1);
+    const limitNumber = Math.max(1, Number(limit) || 10);
     const skip = (pageNumber - 1) * limitNumber;
+    // Find the logged-in farmer
+    const farmer = await prisma.farmer.findUnique({
+        where: {
+            userId,
+        },
+        select: {
+            id: true,
+        },
+    });
+    if (!farmer) {
+        throw new Error("Farmer profile not found");
+    }
+    // Ownership filter: only this farmer's farms
     const andConditions: FarmWhereInput[] = [
         {
             isDeleted: false,
+            farmerId: farmer.id,
         },
     ];
+
     if (searchTerm) {
         andConditions.push({
             OR: [
@@ -58,28 +77,29 @@ const getAllFarms = async (query:IFarmQuery) => {
                     },
                 },
                 {
-                    location :{
+                    location: {
                         contains: searchTerm,
                         mode: "insensitive",
-                    }
+                    },
                 },
                 {
-                    soilType:{
+                    soilType: {
                         contains: searchTerm,
                         mode: "insensitive",
-                    }
+                    },
                 },
                 {
-                    farmer:{
-                        name:{
+                    farmer: {
+                        name: {
                             contains: searchTerm,
                             mode: "insensitive",
-                        }
-                    }
-                }
+                        },
+                    },
+                },
             ],
         });
     }
+
     const whereConditions: FarmWhereInput = {
         AND: andConditions,
     };
@@ -267,12 +287,17 @@ const updateFarm = async (
     }
 
     // Ownership check
-    if (farm.farmerId !== farmerId) {
+    const farmer = await prisma.farmer.findUnique({
+        where: {
+            userId: farmerId,
+        },
+    });
+
+    if (!farmer || farm.farmerId !== farmer.id) {
         throw new Error(
             "You are not authorized to update this farm",
         );
     }
-
     const updatedFarm = await prisma.farm.update({
         where: {
             id,
@@ -290,6 +315,7 @@ const deleteFarm = async (
     const farm = await prisma.farm.findFirst({
         where: {
             id,
+            isDeleted: false,
         },
     });
 
@@ -298,15 +324,25 @@ const deleteFarm = async (
     }
 
     // Ownership check
-    if (farm.farmerId !== farmerId) {
+    const farmer = await prisma.farmer.findUnique({
+        where: {
+            userId: farmerId,
+        },
+    });
+
+    if (!farmer || farm.farmerId !== farmer.id) {
         throw new Error(
-            "You are not authorized to delete this farm",
+            "You are not authorized to update this farm",
         );
     }
 
-    const deletedFarm = await prisma.farm.delete({
+    const deletedFarm = await prisma.farm.update({
         where: {
             id,
+        },
+        data: {
+            isDeleted: true,
+            deletedAt: new Date(),
         },
     });
 

@@ -24,7 +24,11 @@ const createFarm = catchAsync(
 
 const getAllFarms = catchAsync(
     async (req: Request, res: Response) => {
-        const result = await FarmService.getAllFarms(req.query);
+        const user = req.user as { userId: string; role: string };
+        const result = await FarmService.getAllFarms(
+            req.query,
+            user.userId,
+        );
         sendResponse(res, {
             statusCode: 200,
             success: true,
