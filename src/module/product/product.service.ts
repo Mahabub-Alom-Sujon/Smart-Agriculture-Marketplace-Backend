@@ -278,7 +278,7 @@ const getAllAdminProducts = async (query:IProductQuery)=>{
 
 }
 
-const getSingleProduct = async (id: string) => {
+const getSinglePublicProduct = async (id: string) => {
     const result = await prisma.product.findUnique({
         where: {
             id,
@@ -325,6 +325,50 @@ const getSingleProduct = async (id: string) => {
         throw new Error( 'Product not found');
     }
 
+    return result;
+};
+
+const getSingleProduct = async (id: string, userId: string, role: Role) => {
+    if (role !== Role.FARMER && role !== Role.ADMIN && role !== Role.SUPER_ADMIN) {
+        throw new Error("You are not authorized to view this product");
+    }
+    let farmerId: string | undefined;
+    if (role === Role.FARMER) {
+        const farmer = await prisma.farmer.findUnique({
+            where: {
+                userId,
+            },
+            select: {
+                id: true,
+            },
+        });
+        if (!farmer) {
+            throw new Error("Farmer profile not found");
+        }
+        farmerId = farmer.id;
+    }
+    const whereCondition = {
+        id,
+        isDeleted: false,
+        ...(role === Role.FARMER && { farmerId }),
+    };
+    const result = await prisma.product.findFirst({
+        where: whereCondition,
+        include: {
+            category: true,
+            farmer: {
+                select: {
+                    id: true,
+                    name: true,
+                    isDeleted: true,
+                    deletedAt: true,
+                }
+            },
+        },
+    });
+    if (!result) {
+        throw new Error('Product not found');
+    }
     return result;
 };
 
@@ -425,37 +469,117 @@ const deleteProduct = async (id: string, role: Role) => {
 
 };
 
-const getMyProducts = async (userId: string) => {
-    if (!userId) {
-        throw new Error('User ID is required');
-    }
-    const products = await prisma.product.findMany({
+const getMyProducts = async (userId: string, query: IProductQuery) => {
+    const {
+        searchTerm,
+        page = '1',
+        limit = '10',
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+    } = query;
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    // ১. লগইন করা ফারমার প্রোফাইল খুঁজে বের করা
+    const farmer = await prisma.farmer.findUnique({
         where: {
-            isDeleted: false,
-            farmer: {
-                userId: userId,
-            },
+            userId,
         },
-        include: {
-            category:{
-                select:{
-                    id: true,
-                    name: true,
-                }
-            },
-            _count: {
-                select: {
-                    reviews: true,
-                    orderItems: true,
-                },
-            },
-        },
-        orderBy: {
-            createdAt: 'desc',
+        select: {
+            id: true,
         },
     });
 
-    return products;
+    if (!farmer) {
+        throw new Error("Farmer profile not found");
+    }
+
+    // ২. ওনারশিপ চেক এবং ডিলিট না হওয়া প্রোডাক্ট ফিল্টার
+    const andConditions: ProductWhereInput[] = [
+        {
+            isDeleted: false,
+        },
+        {
+            farmerId: farmer.id, // এই লাইনটি নিশ্চিত করে যে শুধুমাত্র এই ফারমারের প্রোডাক্টই আসবে
+        },
+    ];
+
+    // ৩. সার্চ টার্ম ফিল্টার (যদি থাকে)
+    if (searchTerm) {
+        andConditions.push({
+            OR: [
+                {
+                    name: {
+                        contains: searchTerm,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    description: {
+                        contains: searchTerm,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    category: {
+                        name: {
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        },
+                    },
+                },
+                {
+                    farmer: {
+                        name: {
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        }
+                    }
+                }
+            ]
+        });
+    }
+
+    const whereConditions: ProductWhereInput = {
+        AND: andConditions,
+    };
+
+    // ৪. ডাটা এবং টোটাল কাউন্ট কুয়েরি
+    const [products, total] = await Promise.all([
+        prisma.product.findMany({
+            where: whereConditions,
+            skip,
+            take: limitNumber,
+            orderBy: {
+                [sortBy]: sortOrder,
+            },
+            include: {
+                category: true,
+                farmer: true,
+                _count: {
+                    select: {
+                        reviews: true,
+                        orderItems: true,
+                    },
+                },
+            },
+        }),
+        prisma.product.count({
+            where: whereConditions,
+        }),
+    ]);
+
+    return {
+        meta: {
+            page: pageNumber,
+            limit: limitNumber,
+            total,
+            totalPage: Math.ceil(total / limitNumber),
+        },
+        data: products,
+    };
 };
 
 const getProductsByCategory = async (
@@ -530,6 +654,7 @@ export const productService = {
     createProduct,
     getAllProducts,
     getAllAdminProducts,
+    getSinglePublicProduct,
     getSingleProduct,
     updateProduct,
     deleteProduct,

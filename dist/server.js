@@ -1743,7 +1743,7 @@ var getAllAdminProducts = async (query) => {
     data: products
   };
 };
-var getSingleProduct = async (id) => {
+var getSinglePublicProduct = async (id) => {
   const result = await prisma.product.findUnique({
     where: {
       id,
@@ -1781,6 +1781,49 @@ var getSingleProduct = async (id) => {
         select: {
           reviews: true,
           orderItems: true
+        }
+      }
+    }
+  });
+  if (!result) {
+    throw new Error("Product not found");
+  }
+  return result;
+};
+var getSingleProduct = async (id, userId, role) => {
+  if (role !== Role.FARMER && role !== Role.ADMIN && role !== Role.SUPER_ADMIN) {
+    throw new Error("You are not authorized to view this product");
+  }
+  let farmerId;
+  if (role === Role.FARMER) {
+    const farmer = await prisma.farmer.findUnique({
+      where: {
+        userId
+      },
+      select: {
+        id: true
+      }
+    });
+    if (!farmer) {
+      throw new Error("Farmer profile not found");
+    }
+    farmerId = farmer.id;
+  }
+  const whereCondition = {
+    id,
+    isDeleted: false,
+    ...role === Role.FARMER && { farmerId }
+  };
+  const result = await prisma.product.findFirst({
+    where: whereCondition,
+    include: {
+      category: true,
+      farmer: {
+        select: {
+          id: true,
+          name: true,
+          isDeleted: true,
+          deletedAt: true
         }
       }
     }
@@ -1874,36 +1917,106 @@ var deleteProduct = async (id, role) => {
     return result;
   }
 };
-var getMyProducts = async (userId) => {
-  if (!userId) {
-    throw new Error("User ID is required");
-  }
-  const products = await prisma.product.findMany({
+var getMyProducts = async (userId, query) => {
+  const {
+    searchTerm,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc"
+  } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+  const farmer = await prisma.farmer.findUnique({
     where: {
-      isDeleted: false,
-      farmer: {
-        userId
-      }
+      userId
     },
-    include: {
-      category: {
-        select: {
-          id: true,
-          name: true
-        }
-      },
-      _count: {
-        select: {
-          reviews: true,
-          orderItems: true
-        }
-      }
-    },
-    orderBy: {
-      createdAt: "desc"
+    select: {
+      id: true
     }
   });
-  return products;
+  if (!farmer) {
+    throw new Error("Farmer profile not found");
+  }
+  const andConditions = [
+    {
+      isDeleted: false
+    },
+    {
+      farmerId: farmer.id
+      // এই লাইনটি নিশ্চিত করে যে শুধুমাত্র এই ফারমারের প্রোডাক্টই আসবে
+    }
+  ];
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          name: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          description: {
+            contains: searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          category: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        },
+        {
+          farmer: {
+            name: {
+              contains: searchTerm,
+              mode: "insensitive"
+            }
+          }
+        }
+      ]
+    });
+  }
+  const whereConditions = {
+    AND: andConditions
+  };
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where: whereConditions,
+      skip,
+      take: limitNumber,
+      orderBy: {
+        [sortBy]: sortOrder
+      },
+      include: {
+        category: true,
+        farmer: true,
+        _count: {
+          select: {
+            reviews: true,
+            orderItems: true
+          }
+        }
+      }
+    }),
+    prisma.product.count({
+      where: whereConditions
+    })
+  ]);
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPage: Math.ceil(total / limitNumber)
+    },
+    data: products
+  };
 };
 var getProductsByCategory = async (categoryId) => {
   const category = await prisma.category.findUnique({
@@ -1965,6 +2078,7 @@ var productService = {
   createProduct,
   getAllProducts,
   getAllAdminProducts,
+  getSinglePublicProduct,
   getSingleProduct,
   updateProduct,
   deleteProduct,
@@ -2011,10 +2125,27 @@ var getAllAdminProducts2 = catchAsync(
     });
   }
 );
+var getSinglePublicProduct2 = catchAsync(
+  async (req, res) => {
+    const result = await productService.getSinglePublicProduct(
+      req.params.id
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus5.OK,
+      message: "Product retrieved successfully",
+      data: result
+    });
+  }
+);
 var getSingleProduct2 = catchAsync(
   async (req, res) => {
+    const id = req.params.id;
+    const { userId, role } = req.user;
     const result = await productService.getSingleProduct(
-      req.params.id
+      id,
+      userId,
+      role
     );
     sendResponse(res, {
       success: true,
@@ -2057,9 +2188,10 @@ var deleteProduct2 = catchAsync(
 );
 var getMyProducts2 = catchAsync(
   async (req, res) => {
-    const farmerId = req.user?.userId;
+    const userId = req.user?.userId;
     const result = await productService.getMyProducts(
-      farmerId
+      userId,
+      req.query
     );
     sendResponse(res, {
       success: true,
@@ -2103,6 +2235,7 @@ var productController = {
   createProduct: createProduct2,
   getAllProducts: getAllProducts2,
   getAllAdminProducts: getAllAdminProducts2,
+  getSinglePublicProduct: getSinglePublicProduct2,
   getSingleProduct: getSingleProduct2,
   updateProduct: updateProduct2,
   deleteProduct: deleteProduct2,
@@ -2169,14 +2302,19 @@ router3.get(
   productController.getProductsByCategory
 );
 router3.get(
-  "/:id",
-  productController.getSingleProduct
+  "/public/:id",
+  productController.getSinglePublicProduct
 );
 router3.post(
   "/",
   auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
   validateRequest(productValidation.createProductValidation),
   productController.createProduct
+);
+router3.get(
+  "/:id",
+  auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
+  productController.getSingleProduct
 );
 router3.get(
   "/farmer/my-products",

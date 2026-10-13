@@ -4,6 +4,7 @@ import { catchAsync } from '../../utils/catch-async'
 import { sendResponse } from '../../utils/send-response'
 import { productService } from './product.service'
 import {Role} from "../../../generated/prisma/enums";
+import {IRequestUser} from "../auth/auth.interface";
 
 const createProduct = catchAsync(
     async (req: Request, res: Response) => {
@@ -47,10 +48,29 @@ const getAllAdminProducts = catchAsync(
 );
 
 
+const getSinglePublicProduct = catchAsync(
+    async (req: Request, res: Response) => {
+        const result = await productService.getSinglePublicProduct(
+            req.params.id as string,
+        );
+
+        sendResponse(res, {
+            success: true,
+            statusCode : httpStatus.OK,
+            message: 'Product retrieved successfully',
+            data: result,
+        });
+    }
+);
+
 const getSingleProduct = catchAsync(
     async (req: Request, res: Response) => {
+        const  id  = req.params.id as string;
+        const { userId, role } = req.user!;
         const result = await productService.getSingleProduct(
-            req.params.id as string,
+            id,
+            userId,
+            role
         );
 
         sendResponse(res, {
@@ -100,10 +120,11 @@ const deleteProduct = catchAsync(
 
 const getMyProducts = catchAsync(
     async (req: Request, res: Response) => {
-        const farmerId = req.user?.userId as string;
-        //const farmerId = req.id as string;
+        const userId = req.user?.userId as string;
+        //const user = req.user as { userId: string; role: string };
         const result = await productService.getMyProducts(
-            farmerId
+            userId,
+            req.query
         );
         sendResponse(res, {
             success: true,
@@ -154,6 +175,7 @@ export const productController ={
     createProduct,
     getAllProducts,
     getAllAdminProducts,
+    getSinglePublicProduct,
     getSingleProduct,
     updateProduct,
     deleteProduct,

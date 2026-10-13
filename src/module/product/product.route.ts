@@ -27,8 +27,8 @@ router.get(
 );
 
 router.get(
-    '/:id',
-    productController.getSingleProduct
+    '/public/:id',
+    productController.getSinglePublicProduct
 );
 
 
@@ -42,6 +42,11 @@ router.post(
     productController.createProduct
 );
 
+router.get(
+    '/:id',
+    auth(Role.FARMER, Role.ADMIN, Role.SUPER_ADMIN),
+    productController.getSingleProduct
+);
 
 
 router.get(
