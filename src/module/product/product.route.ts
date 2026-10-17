@@ -13,6 +13,8 @@ const router = Router();
 
 router.get('/', productController.getAllProducts);
 
+router.get("/featured", productController.getFeaturedProducts);
+
 // Admin
 
 router.get('/admin',

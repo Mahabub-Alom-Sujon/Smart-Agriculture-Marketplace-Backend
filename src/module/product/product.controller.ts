@@ -20,6 +20,18 @@ const createProduct = catchAsync(
     }
 );
 
+const  getFeaturedProducts = catchAsync (
+    async (req: Request, res: Response) => {
+        const products = await productService.getFeaturedProducts();
+        sendResponse(res, {
+            success: true,
+            statusCode : httpStatus.OK,
+            message: 'Featured products retrieved successfully',
+            data: products,
+        });
+    }
+)
+
 const getAllProducts = catchAsync(
     async (req: Request, res: Response) => {
         const result = await productService.getAllProducts( req.query);
@@ -173,6 +185,7 @@ const updateProductStatus = catchAsync(
 
 export const productController ={
     createProduct,
+    getFeaturedProducts,
     getAllProducts,
     getAllAdminProducts,
     getSinglePublicProduct,

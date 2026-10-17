@@ -1532,6 +1532,44 @@ var createProduct = async (payload) => {
   });
   return result;
 };
+var getFeaturedProducts = async () => {
+  const products = await prisma.product.findMany({
+    where: {
+      status: ProductStatus.ACTIVE,
+      isDeleted: false,
+      quantity: {
+        gt: 0
+      }
+    },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      price: true,
+      quantity: true,
+      unit: true,
+      image: true,
+      status: true,
+      createdAt: true,
+      category: {
+        select: {
+          id: true,
+          name: true
+        }
+      },
+      farmer: {
+        select: {
+          id: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: "desc"
+    },
+    take: 8
+  });
+  return products;
+};
 var getAllProducts = async (query) => {
   const {
     searchTerm,
@@ -2076,6 +2114,7 @@ var updateProductStatus = async (id, status) => {
 };
 var productService = {
   createProduct,
+  getFeaturedProducts,
   getAllProducts,
   getAllAdminProducts,
   getSinglePublicProduct,
@@ -2098,6 +2137,17 @@ var createProduct2 = catchAsync(
       statusCode: httpStatus5.OK,
       message: "Product created successfully",
       data: result
+    });
+  }
+);
+var getFeaturedProducts2 = catchAsync(
+  async (req, res) => {
+    const products = await productService.getFeaturedProducts();
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus5.OK,
+      message: "Featured products retrieved successfully",
+      data: products
     });
   }
 );
@@ -2233,6 +2283,7 @@ var updateProductStatus2 = catchAsync(
 );
 var productController = {
   createProduct: createProduct2,
+  getFeaturedProducts: getFeaturedProducts2,
   getAllProducts: getAllProducts2,
   getAllAdminProducts: getAllAdminProducts2,
   getSinglePublicProduct: getSinglePublicProduct2,
@@ -2292,6 +2343,7 @@ var productValidation = {
 // src/module/product/product.route.ts
 var router3 = Router3();
 router3.get("/", productController.getAllProducts);
+router3.get("/featured", productController.getFeaturedProducts);
 router3.get(
   "/admin",
   auth(Role.ADMIN, Role.SUPER_ADMIN),

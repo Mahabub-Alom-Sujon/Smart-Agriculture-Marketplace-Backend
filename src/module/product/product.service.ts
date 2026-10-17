@@ -45,6 +45,46 @@ const createProduct = async (payload: CreateProduct) => {
     return result;
 };
 
+const getFeaturedProducts = async () => {
+    const products = await prisma.product.findMany({
+        where: {
+            status: ProductStatus.ACTIVE,
+            isDeleted: false,
+            quantity: {
+                gt: 0,
+            },
+        },
+        select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true,
+            quantity: true,
+            unit: true,
+            image: true,
+            status: true,
+            createdAt: true,
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            farmer: {
+                select: {
+                    id: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: "desc",
+        },
+        take: 8,
+    });
+
+    return products;
+};
+
 const getAllProducts = async (query:IProductQuery)=>{
     const {
         searchTerm,
@@ -652,6 +692,7 @@ const updateProductStatus = async (
 };
 export const productService = {
     createProduct,
+    getFeaturedProducts,
     getAllProducts,
     getAllAdminProducts,
     getSinglePublicProduct,
