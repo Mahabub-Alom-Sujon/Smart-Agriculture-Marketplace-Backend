@@ -73,13 +73,20 @@ const getFeaturedProducts = async () => {
             farmer: {
                 select: {
                     id: true,
+                    name: true,
+                },
+            },
+            _count: {
+                select: {
+                    reviews: true,
+                    orderItems: true,
                 },
             },
         },
         orderBy: {
             createdAt: "desc",
         },
-        take: 8,
+        // take: 8,
     });
 
     return products;
