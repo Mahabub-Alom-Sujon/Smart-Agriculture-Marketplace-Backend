@@ -17,7 +17,7 @@ const createCategory = catchAsync(async (req: Request, res: Response) => {
 });
 const getAllAdminCategories = catchAsync(
     async (req: Request, res: Response) => {
-        const result = await categoryServices.getAllAdminCategories();
+        const result = await categoryServices.getAllAdminCategories(req.query);
         sendResponse(res, {
             success: true,
             statusCode: httpStatus.OK,
@@ -30,7 +30,7 @@ const getAllAdminCategories = catchAsync(
 
 const getAllCategories = catchAsync(
     async (req: Request, res: Response) => {
-        const result = await categoryServices.getAllCategories(req.query);
+        const result = await categoryServices.getAllCategories();
         sendResponse(res, {
             success: true,
             statusCode: httpStatus.OK,

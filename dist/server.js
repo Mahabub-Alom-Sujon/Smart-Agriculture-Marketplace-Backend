@@ -1187,7 +1187,7 @@ var createCategory = async (payload) => {
     data: payload
   });
 };
-var getAllAdminCategories = async () => {
+var getAllCategories = async () => {
   const result = await prisma.category.findMany({
     where: {
       isDeleted: false
@@ -1204,7 +1204,7 @@ var getAllAdminCategories = async () => {
   });
   return result;
 };
-var getAllCategories = async (query) => {
+var getAllAdminCategories = async (query) => {
   const {
     searchTerm,
     page = "1",
@@ -1348,7 +1348,7 @@ var createCategory2 = catchAsync(async (req, res) => {
 });
 var getAllAdminCategories2 = catchAsync(
   async (req, res) => {
-    const result = await categoryServices.getAllAdminCategories();
+    const result = await categoryServices.getAllAdminCategories(req.query);
     sendResponse(res, {
       success: true,
       statusCode: httpStatus4.OK,
@@ -1359,7 +1359,7 @@ var getAllAdminCategories2 = catchAsync(
 );
 var getAllCategories2 = catchAsync(
   async (req, res) => {
-    const result = await categoryServices.getAllCategories(req.query);
+    const result = await categoryServices.getAllCategories();
     sendResponse(res, {
       success: true,
       statusCode: httpStatus4.OK,
