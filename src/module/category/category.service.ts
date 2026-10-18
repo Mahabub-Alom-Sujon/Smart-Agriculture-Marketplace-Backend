@@ -13,16 +13,13 @@ const getAllCategories = async ()=>{
         where: {
             isDeleted: false,
         },
-        select:{
-            id:true,
-            name:true,
-            description:true,
-            isDeleted:true,
-            deletedAt:true,
-            createdAt:true,
-            updatedAt:true,
-
-        }
+        include: {
+            _count: {
+                select: {
+                    products: true,
+                },
+            },
+        },
     })
     return result;
 }
