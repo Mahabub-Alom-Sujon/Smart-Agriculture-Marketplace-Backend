@@ -17,42 +17,6 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
 
-// src/config/index.ts
-import dotenv from "dotenv";
-import path from "path";
-dotenv.config({ path: path.join(process.cwd(), ".env") });
-var config_default = {
-  node_env: process.env.NODE_ENV,
-  port: process.env.PORT || 5e3,
-  database_url: process.env.DATABASE_URL,
-  bak_url: process.env.APP_URL,
-  frontend_url: process.env.FRONTEND_URL,
-  bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,
-  // JWT সেটিংস
-  jwt_access_secret: process.env.JWT_ACCESS_SECRET,
-  jwt_refresh_secret: process.env.JWT_REFRESH_SECRET,
-  jwt_access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN,
-  jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
-  // স্ট্রাইপ (Stripe) পেমেন্ট সেটিংস
-  stripe_secret_key: process.env.STRIPE_SECRET_KEY,
-  stripe_publishable_key: process.env.STRIPE_PUBLISHABLE_KEY,
-  stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
-  stripe_product_id: process.env.STRIPE_PRODUCT_ID,
-  stripe_product_price_id: process.env.STRIPE_PRODUCT_PRICE_ID,
-  cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
-  cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
-  // ওঅথ (OAuth) সেটিংস
-  google_client_id: process.env.GOOGLE_CLIENT_ID,
-  // সুপার এডমিন ও টেস্টার ক্রেডেনশিয়ালস
-  super_admin_name: process.env.SUPER_ADMIN_NAME,
-  super_admin_email: process.env.SUPER_ADMIN_EMAIL,
-  super_admin_password: process.env.SUPER_ADMIN_PASSWORD,
-  tester_admin_name: process.env.TESTER_ADMIN_NAME,
-  tester_admin_email: process.env.TESTER_ADMIN_EMAIL,
-  tester_admin_password: process.env.TESTER_ADMIN_PASSWORD
-};
-
 // src/middlewares/not-found.ts
 import httpStatus from "http-status";
 var notFoundHandler = (req, res, next) => {
@@ -66,7 +30,7 @@ var notFoundHandler = (req, res, next) => {
 import httpStatus2 from "http-status";
 
 // generated/prisma/client.ts
-import * as path2 from "path";
+import * as path from "path";
 import { fileURLToPath } from "url";
 
 // generated/prisma/internal/class.ts
@@ -477,7 +441,7 @@ var PaymentStatus = {
 };
 
 // generated/prisma/client.ts
-globalThis["__dirname"] = path2.dirname(fileURLToPath(import.meta.url));
+globalThis["__dirname"] = path.dirname(fileURLToPath(import.meta.url));
 var PrismaClient = getPrismaClientClass();
 
 // src/middlewares/global-error.ts
@@ -520,6 +484,42 @@ var globalErrorHandler = (err, req, res, next) => {
 
 // src/module/auth/auth.route.ts
 import { Router } from "express";
+
+// src/config/index.ts
+import dotenv from "dotenv";
+import path2 from "path";
+dotenv.config({ path: path2.join(process.cwd(), ".env") });
+var config_default = {
+  node_env: process.env.NODE_ENV,
+  port: process.env.PORT || 5e3,
+  database_url: process.env.DATABASE_URL,
+  bak_url: process.env.APP_URL,
+  frontend_url: process.env.FRONTEND_URL,
+  bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,
+  // JWT সেটিংস
+  jwt_access_secret: process.env.JWT_ACCESS_SECRET,
+  jwt_refresh_secret: process.env.JWT_REFRESH_SECRET,
+  jwt_access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN,
+  jwt_refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN,
+  // স্ট্রাইপ (Stripe) পেমেন্ট সেটিংস
+  stripe_secret_key: process.env.STRIPE_SECRET_KEY,
+  stripe_publishable_key: process.env.STRIPE_PUBLISHABLE_KEY,
+  stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
+  stripe_product_id: process.env.STRIPE_PRODUCT_ID,
+  stripe_product_price_id: process.env.STRIPE_PRODUCT_PRICE_ID,
+  cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
+  cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
+  // ওঅথ (OAuth) সেটিংস
+  google_client_id: process.env.GOOGLE_CLIENT_ID,
+  // সুপার এডমিন ও টেস্টার ক্রেডেনশিয়ালস
+  super_admin_name: process.env.SUPER_ADMIN_NAME,
+  super_admin_email: process.env.SUPER_ADMIN_EMAIL,
+  super_admin_password: process.env.SUPER_ADMIN_PASSWORD,
+  tester_admin_name: process.env.TESTER_ADMIN_NAME,
+  tester_admin_email: process.env.TESTER_ADMIN_EMAIL,
+  tester_admin_password: process.env.TESTER_ADMIN_PASSWORD
+};
 
 // src/lib/prisma.ts
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -6836,12 +6836,22 @@ var FarmerRoutes = router14;
 // src/app.ts
 var app = express4();
 app.use(helmet());
+var allowedOrigins = [
+  "http://localhost:3000",
+  "https://smart-agriculture-marketplace-nine.vercel.app"
+];
 app.use(
   cors({
-    origin: config_default.frontend_url || "http://localhost:3000",
-    credentials: true,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
   })
 );
 app.use(

@@ -31,12 +31,25 @@ app.use(helmet());
 //     }),
 // );
 
+const allowedOrigins = [
+    "http://localhost:3000",
+    "https://smart-agriculture-marketplace-nine.vercel.app",
+];
+
 app.use(
     cors({
-        origin: config.frontend_url || "http://localhost:3000",
-        credentials: true,
+        origin: (origin, callback) => {
+            // Allow requests without an Origin header
+            // (e.g. server-to-server requests)
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error(`CORS blocked for origin: ${origin}`));
+            }
+        },
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true,
     })
 );
 
