@@ -8,17 +8,13 @@ const getAllFarmers =async()=>{
         where: {
             isDeleted: false,
         },
-        // select:{
-        //     id:true,
-        //     name:true,
-        //     isDeleted:true,
-        //     deletedAt:true,
-        //     createdAt:true,
-        //     updatedAt:true,
-        //
-        // },
         include:{
-            farms:true
+            farms:true,
+            _count: {
+                select: {
+                    products: true,
+                },
+            },
         },
         orderBy: {
             createdAt: "desc",
